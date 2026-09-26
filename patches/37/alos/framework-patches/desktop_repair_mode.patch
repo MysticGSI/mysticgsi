@@ -1,0 +1,9 @@
+--- smali/com/android/server/desktop/repairmode/DesktopRepairModeService.smali
++++ smali/com/android/server/desktop/repairmode/DesktopRepairModeService.smali
+@@ -271,1 +271,5 @@
+-    const-string v0, "vendor.google.desktop.vpd_executor.IVpdExecutor/default"
++    const/4 v0, 0x0
++
++    return-object v0
++
++    const-string v0, "vendor.google.desktop.vpd_executor.IVpdExecutor/default"

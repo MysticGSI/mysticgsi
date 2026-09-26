@@ -1,0 +1,29 @@
+{
+    "use_stock_init": true,
+    "debloat": {
+        "product": {
+            "app": [
+                "YouTubeMusicPrebuilt",
+                "YouTube",
+                "Videos",
+                "Photos",
+                "Maps",
+                "GoogleTTS",
+                "Drive",
+                "talkback"
+            ],
+            "priv-app": [
+                "ScribePrebuilt*",
+                "KidsSupervisionStub"
+            ]
+        },
+        "system": {
+            "app": [
+                "Stk"
+            ],
+            "priv-app": [
+                "TagGoogle"
+            ]
+        }
+    }
+}

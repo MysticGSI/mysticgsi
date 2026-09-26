@@ -1,0 +1,7 @@
+{
+    "system": {
+        "system/framework/desktop-services.jar": [
+            "desktop_repair_mode"
+        ]
+    }
+}

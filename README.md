@@ -125,9 +125,10 @@ The image ends up in `out/<name>/`. `--compress` creates a ZIP containing
 `system.img` at its root. `--add <tag>` adds a tag to the build name, and
 `--no-debloat` keeps the apps the ROM's patch set would otherwise remove.
 
-`--type` picks the patch set for the ROM you're porting (`hyperos`, `coloros`,
-`oneui`, `pixel`, ...). See `ls patches/<sdk>` for the list. Without it only
-generic patches are applied, unless it's a custom ROM like LineageOS.
+`--type` picks the patch set for the ROM you're porting (`alos`, `hyperos`,
+`coloros`, `oneui`, `pixel`, ...). See `ls patches/<sdk>` for the list.
+Without it only generic patches are applied, unless it's a custom ROM like
+LineageOS.
 
 Example:
 

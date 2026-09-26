@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -151,3 +152,33 @@ def test_rom_patch_errors_propagate(tmp_path, monkeypatch):
     monkeypatch.setattr(porter, "_apply_framework_patches", fail)
     with pytest.raises(RuntimeError, match="required patch failed"):
         porter._apply_rom_patches()
+
+
+def test_alos_repair_patch_preempts_vpd_wait(tmp_path):
+    patch = shutil.which("gpatch") or shutil.which("patch")
+    if not patch:
+        pytest.skip("patch command unavailable")
+
+    relative = Path(
+        "smali/com/android/server/desktop/repairmode/"
+        "DesktopRepairModeService.smali")
+    smali = tmp_path / relative
+    smali.parent.mkdir(parents=True)
+    smali.write_text(
+        ".end method\n\n"
+        ".method private final readPostManufacturingConfig()"
+        "Lcom/google/android/factory/base/proto/postmanufacturing/Config;\n"
+        "    .locals 8\n\n"
+        "    const-string v0, "
+        '"vendor.google.desktop.vpd_executor.IVpdExecutor/default"\n\n'
+        "    invoke-static {v0}, "
+        "Landroid/os/ServiceManager;->waitForService"
+        "(Ljava/lang/String;)Landroid/os/IBinder;\n"
+        ".end method\n")
+    patch_file = (Path(__file__).resolve().parents[1] / "patches/37/alos"
+                  / "framework-patches/desktop_repair_mode.patch")
+
+    assert fsops.run([patch, "-p0", "-F", "0", "-s", "-N"],
+                     cwd=tmp_path, stdin=patch_file) == 0
+    method = smali.read_text().split(".method private final ", 1)[1]
+    assert method.index("return-object v0") < method.index("waitForService")
