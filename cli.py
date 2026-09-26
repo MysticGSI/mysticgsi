@@ -131,7 +131,6 @@ def cmd_build(args):
         return 1
     rom_type, _, rom_custom = args.type.partition(":")
 
-    wt: make.RomPorter | None = None
     try:
         wt = make.RomPorter(args.name, args.add)
         wt.rom_type = make.safe_name(rom_type, "rom_type")
