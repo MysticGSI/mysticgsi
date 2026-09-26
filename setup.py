@@ -87,17 +87,48 @@ def chmod_plus_x(file_path: str):
     new_mode = current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
     os.chmod(file_path, new_mode)
 
-def download(download_url:str, path):
+def download(download_url: str, path: str):
     if os.path.exists(path) and os.path.getsize(path) > 0:
         print(f"{path} already exists.")
         return True
     dir_name = os.path.dirname(path)
-    os.makedirs(dir_name, exist_ok=True)
-    r = requests.get(download_url)
-    if r.status_code == 200:
-        with open(path, "wb") as f:
-            f.write(r.content)
-    return r.status_code == 200
+    if dir_name:
+        os.makedirs(dir_name, exist_ok=True)
+    try:
+        r = requests.get(download_url, stream=True)
+        if r.status_code == 200:
+            total_size = r.headers.get("content-length")
+            downloaded = 0
+            bar_length = 30
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
+                        if total_size:
+                            downloaded += len(chunk)
+                            total = int(total_size)
+                            done = int(bar_length * downloaded / total)
+                            percent = (downloaded / total) * 100
+                            bar = "█" * done + "-" * (bar_length - done)
+                            sys.stdout.write(f"\r  |{bar}| {percent:.1f}%")
+                            sys.stdout.flush()
+
+            if total_size:
+                print()
+            log(f"Downloaded to: {path}")
+            return True
+
+        else:
+            die(
+                f"Failed to download. HTTP Status Code: {r.status_code}",
+            )
+
+    except Exception as e:
+        die(f"Network/IO Error occurred: {e}")
+        if os.path.exists(path):
+            os.remove(path)
+        return False
 
 def install_apktool():
     if which('apktool'):
