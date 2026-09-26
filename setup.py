@@ -105,7 +105,7 @@ def install_apktool():
     home_path = os.environ["HOME"]
     bin_path = f"{home_path}/.local/bin"
     log(f"Installing apktool into {bin_path}")
-    r = requests.get('https://api.github.com/repos/iBotPeaches/Apktool/releases/latest')
+    r = requests.get('https://api.github.com/repos/iBotPeaches/Apktool/releases/latest', timeout=3)
     json = r.json()
     assets = json["assets"]
     download_link = next(a["browser_download_url"] for a in assets
@@ -115,7 +115,7 @@ def install_apktool():
     download(download_link, f"{bin_path}/apktool.jar")
     with open(f'{bin_path}/apktool', newline='\n', encoding='utf-8', mode='w') as f:
         f.write("#!/bin/sh\n")
-        f.write('exec java -jar "my_bin/apktool.jar" "$@"\n')
+        f.write(f'exec java -jar "{bin_path}/apktool.jar" "$@"\n')
     chmod_plus_x(f'{bin_path}/apktool')
     if bin_path not in os.environ['PATH']:
         warn(f"{bin_path} is not on PATH; add it to your shell profile\nso builds can find apktool")
