@@ -266,10 +266,20 @@ def avb_key_path(value):
     return path
 
 
+def cmd_tui(args):
+    from tui import MysticApp
+
+    MysticApp().run()
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="CLI entry point for mysticgsi builds.")
     sub = ap.add_subparsers(dest="command", required=True)
+
+    tui = sub.add_parser("tui", help="open the interactive terminal app")
+    tui.set_defaults(func=cmd_tui)
 
     build = sub.add_parser(
         "build", help="build a GSI from a URL or a local file")

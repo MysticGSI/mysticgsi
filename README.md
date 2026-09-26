@@ -104,6 +104,22 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ## Usage
 
+Launch the terminal app to build, rebuild, view outputs, or clean up:
+
+```sh
+.venv/bin/python cli.py tui
+```
+
+Use ↑/↓ or j/k to select builds, N for a new build, R to rebuild, and Tab to
+switch panes. Details and live logs stay visible beside the build list.
+Leave the app open until the operation ends.
+
+D opens a size-sorted debloat browser: Enter opens a directory, Left goes
+back, and D deletes the selected file or folder after confirmation. A adds
+its path to the patch set's debloat list; H shows previously removed paths.
+Rebuild after deleting files to update the image; saved debloat rules apply
+to future builds using the same patch set.
+
 By default, builds and rebuilds use AOSP's AVB RSA-2048 test key and a
 SHA-256 hash tree. OpenSSL is required; avbtool and the key are bundled.
 Signing failures preserve the previous image. APK keys are unchanged;

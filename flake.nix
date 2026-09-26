@@ -17,6 +17,7 @@
           # requirements-dev.txt, resolved from nixpkgs instead of pip.
           python = pkgs.python313.withPackages (ps: with ps; [
             requests         # naming downloads from Content-Disposition
+            textual
             protobuf         # payload.bin manifests
             zstandard
             lz4

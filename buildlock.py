@@ -43,8 +43,8 @@ def _unlock(fh):
 
 
 @contextlib.contextmanager
-def hold(on_busy=None):
-    fh = open(LOCK_PATH, "a+")
+def hold(on_busy=None, path=None):
+    fh = open(path or LOCK_PATH, "a+")
     try:
         fh.seek(0)
         if not _try_lock(fh):
