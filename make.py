@@ -12,6 +12,7 @@ from assets import ensure_extracted
 import fsops
 import tools
 from tools.config import DEFAULT_PARTITIONS
+from tools.isa import find_cpu_features
 
 SAFE_NAME = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 UNSAFE_CHARS = re.compile(r"[^A-Za-z0-9._-]")
@@ -320,6 +321,7 @@ class RomPorter:
         self.avb_key = None
         self.work_dir = f"{tmp_dir}/{rom_name}"
         self.props: dict[str, SettingsProp] = {}
+        self.cpu_warning = ""
 
     def log(self, message):
         self.logger.add(message)
@@ -1897,11 +1899,40 @@ Architecture: {self._architecture()}
                   encoding="utf-8") as f:
             json.dump(labels, f)
 
+    def _warn_cpu_features(self):
+        self.cpu_warning = ""
+        system = self._get_system_root()
+        found = {}
+        for relative_path in (
+                "bin/init", "bin/bootstrap/linker64", "bin/linker64",
+                "bin/app_process64", "bin/servicemanager",
+                "bin/hwservicemanager", "bin/surfaceflinger"):
+            path = os.path.join(system, relative_path)
+            if not os.path.lexists(path) or os.path.islink(path):
+                continue
+            features = find_cpu_features(path)
+            if features is None:
+                self.log(f"Warning: could not check CPU instructions in "
+                         f"system/{relative_path}")
+                continue
+            for feature in sorted(features):
+                found.setdefault(feature, f"system/{relative_path}")
+        if found:
+            evidence = ", ".join(
+                f"{feature} ({path})"
+                for feature, path in sorted(found.items()))
+            self.cpu_warning = (
+                f"Newer ARM instructions found: {evidence}. Devices lacking "
+                "these features may fail to boot; runtime CPU checks may "
+                "provide fallbacks.")
+            self.log("Warning: " + self.cpu_warning)
+
     def _write_image(self, output_name):
         """
         Builds out/<rom_name>/<output_name>.img from the system tree, sized
         to fit its contents. Returns the signed image size, or None.
         """
+        self._warn_cpu_features()
         system_dir = self.partition_dirs['system']
         out_dir = f"out/{self.rom_name}"
         # Allocated blocks, not file sizes: small files and directories
@@ -1953,6 +1984,9 @@ Architecture: {self._architecture()}
             system_size = self._write_image(output_name)
             if system_size is None:
                 return -1
+            if self.cpu_warning:
+                self.build_info_text += (
+                    f"CPU compatibility: {self.cpu_warning}\n")
             self.build_info_text += (
                 f"Raw Image Size: {bytes_to_human(system_size)}\n")
             with open(f"out/{self.rom_name}/output.txt", "w") as f:

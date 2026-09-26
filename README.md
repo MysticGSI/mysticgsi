@@ -138,6 +138,9 @@ Example:
 ```
 
 The build summary says whether the image is 64-bit only or 32/64-bit.
+Builds and rebuilds warn when core executables contain selected SVE/SVE2,
+SME, BF16, I8MM, MOPS, or CSSC instructions. Runtime CPU checks may provide
+fallbacks; no warning does not guarantee compatibility with older CPUs.
 
 To tweak a finished build, edit its system tree in `tmp/<name>/images/system/`
 (delete apps, add files) and run `cli.py rebuild <name>`. The image is
