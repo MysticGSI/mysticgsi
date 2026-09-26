@@ -2,12 +2,11 @@
 Partition lists and constants shared across tools.
 """
 
-from typing import Tuple
 
 BLOCK_SIZE = 4096
 
 # Partitions extracted from firmware and unpacked for porting.
-DEFAULT_PARTITIONS: Tuple[str, ...] = (
+DEFAULT_PARTITIONS: list[str] = [
     'system',
     'system_ext',
     'product',
@@ -35,4 +34,4 @@ DEFAULT_PARTITIONS: Tuple[str, ...] = (
     'tr_theme',
     'prism',
     'optics',
-)
+]

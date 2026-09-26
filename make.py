@@ -235,7 +235,7 @@ class SettingsProp:
             "ro.product.system.manufacturer",
             "ro.product.product.manufacturer")
 
-    def get_android_version(self):
+    def get_android_version(self) -> int | str | None:
         codename = self.values.get("ro.build.version.codename")
         known_codenames = self.values.get("ro.build.version.known_codenames")
         if known_codenames and codename and str(codename) in known_codenames:
@@ -301,13 +301,13 @@ class StubLogger:
 
 
 class RomPorter:
-    PARTITION_NAMES: ClassVar[tuple[str, ...]] = DEFAULT_PARTITIONS
+    PARTITION_NAMES: ClassVar[list[str]] = DEFAULT_PARTITIONS
 
     def __init__(self, rom_name, variant_tag=""):
         self.images_dir = ""
         self.logger = StubLogger()
         self.image_files = {}
-        self.partition_dirs = {}
+        self.partition_dirs:dict[str, str] = {}
         self.rom_name = safe_name(rom_name, "rom_name")
         self.rom_type = "auto"
         self.variant_tag = variant_tag
@@ -451,6 +451,8 @@ class RomPorter:
 
         for rom, value in custom_rom_props.items():
             for prop in (system_prop, product_prop):
+                if not prop:
+                    continue
                 for key in value:
                     if prop.exists(key):
                         self.rom_type = rom
@@ -830,8 +832,7 @@ class RomPorter:
     def _patch_frameworks(self, workdir):
         if self._is_xiaomi_rom():
             self._patch_xiaomi_frameworks(workdir)
-
-        if self.rom_type == 'nothing':
+        elif self.rom_type == 'nothing':
             self._patch_nothing_frameworks(workdir)
 
     def patch_init(self):
@@ -1102,7 +1103,7 @@ class RomPorter:
                     os.path.join(system, 'build.prop'),
                     '\nro.miui.product.home=com.mi.android.globallauncher')
 
-    def _patch_zte(self, systemdir, vendor_prop: SettingsProp):
+    def _patch_zte(self, vendor_prop: SettingsProp):
         system_path = self._get_system_root()
 
         features_to_skip = [
@@ -1474,9 +1475,6 @@ class RomPorter:
             if os.path.exists(os.path.join(system, 'vendor')):
                 fsops.rmrf(os.path.join(system, 'vendor', '*'))
 
-    def _should_apply_init_patches(self):
-        return self.rom_type in ('magicos', 'emui', 'harmonyos', 'pixel')
-
     def _apply_rom_patches(self):
         self._detect_rom_type()
 
@@ -1523,7 +1521,7 @@ class RomPorter:
             else:
                 self.log(f"No init for {android_version}; patching stock init")
                 self.patch_init()
-        elif self._should_apply_init_patches():
+        elif self.rom_type in ('magicos', 'emui', 'harmonyos', 'pixel'):
             self.patch_init()
 
         system_prop_file = os.path.join(rom_patches_dir, "system.prop")
@@ -1734,9 +1732,9 @@ class RomPorter:
             self._drop_selinux_mappings()
 
             if self._is_zte_rom() and vendor_prop:
-                self._patch_zte(system_dir, vendor_prop)
+                self._patch_zte(vendor_prop)
 
-            if self._is_google_pixel_rom():
+            if self.rom_type in ['pixel']:
                 self._patch_google()
 
             if self._is_xiaomi_rom():
@@ -1787,9 +1785,6 @@ Architecture: {self._architecture()}
 
     def _is_xiaomi_rom(self):
         return self.rom_type in ('miui', 'hyperos', 'joyui')
-
-    def _is_google_pixel_rom(self):
-        return self.rom_type in ['pixel']
 
     def _is_zte_rom(self):
         # NebulaOS isn't ZTE but takes the same patches.
