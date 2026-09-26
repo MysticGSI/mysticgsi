@@ -144,6 +144,33 @@ def test_archive_combines_supers_with_different_layouts(tmp_path, reverse):
     assert (output / 'tr_mi.img').read_bytes() == mi
 
 
+@pytest.mark.parametrize('payload_blocks', [1, 2])
+def test_archive_extracts_honor_system_with_separate_metadata(
+        tmp_path, payload_blocks):
+    metadata = tmp_path / 'super_metadata.img'
+    _build_super(metadata, [
+        ('system_a', [(16, lp_super.LP_TARGET_TYPE_LINEAR, 2048)]),
+    ], [])
+    system = bytearray(payload_blocks * 4096)
+    system[1024:1028] = b'\xe2\xe1\xf5\xe0'
+    source = tmp_path / 'firmware.zip'
+    with zipfile.ZipFile(source, 'w') as archive:
+        archive.write(metadata, 'Firmware/super_metadata.img')
+        archive.writestr('Firmware/super.img',
+                         _sparse_super(system, set()))
+
+    output = tmp_path / 'out'
+    result = extract_firmware(str(source), str(output),
+                              logger=lambda message: None)
+
+    if payload_blocks == 2:
+        assert result == 0
+        assert (output / 'system.img').read_bytes() == system
+    else:
+        assert result == 1
+        assert not (output / 'system.img').exists()
+
+
 # 60 lands in the header, 200 in the partition/extent tables.
 @pytest.mark.parametrize("corrupt_at", [60, 200])
 def test_corrupt_primary_metadata_falls_back_to_next_slot(tmp_path,

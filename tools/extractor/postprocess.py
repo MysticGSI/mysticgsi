@@ -194,14 +194,22 @@ def postprocess_extracted_images(
 
     super_images = (_staged(staging_dir, "**/*super*.img")
                     + _staged(staging_dir, "**/*super*.bin"))
+    metadata_images = {
+        os.path.dirname(path): path for path in super_images
+        if os.path.basename(path).lower() == 'super_metadata.img'
+    }
     for s_img in super_images:
-        if not os.path.isfile(s_img):
+        base_name = os.path.basename(s_img).lower()
+        if (not os.path.isfile(s_img)
+                or base_name == 'super_metadata.img'):
             continue
+        metadata_path = (metadata_images.get(os.path.dirname(s_img))
+                         if base_name == 'super.img' else None)
         with tempfile.TemporaryDirectory(
                 prefix='super-partitions-', dir=staging_dir) as scratch:
             extracted = lp_super.unpack_super(
                 s_img, scratch, target_partitions=target_partitions,
-                logger=logger)
+                logger=logger, metadata_path=metadata_path)
             for path in extracted:
                 name = normalize_partition_filename(os.path.basename(path))
                 destination = os.path.join(staging_dir, name)

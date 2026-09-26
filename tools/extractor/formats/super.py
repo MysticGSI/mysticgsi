@@ -3,9 +3,11 @@
 from typing import Dict, List, Optional, Set
 import hashlib
 import os
+import shutil
 import struct
 import tempfile
 
+from ...fs.detect import detect_filesystem
 from . import sparse
 
 LP_METADATA_GEOMETRY_MAGIC = 0x616C4467
@@ -203,11 +205,45 @@ def _copy_partition(f, part: LpPartition, out_path: str):
         out_f.truncate(out_size)
 
 
+def _extract_system_payload(active_path: str, output_dir: str,
+                            metadata_path: str, temp_raw: Optional[str],
+                            targets: Optional[Set[str]]) -> Optional[str]:
+    if targets is not None and 'system' not in targets:
+        return None
+
+    with open(metadata_path, 'rb') as metadata_file:
+        partitions = read_lp_metadata(metadata_file)
+    if partitions is None:
+        return None
+
+    system = partitions.get('system_a') or partitions.get('system')
+    if system is None or len(system.extents) != 1:
+        return None
+    extent = system.extents[0]
+    if (extent.target_type != LP_TARGET_TYPE_LINEAR
+            or extent.target_source != 0
+            or extent.num_bytes != os.path.getsize(active_path)
+            or detect_filesystem(active_path) == 'unknown'):
+        return None
+
+    out_path = os.path.join(output_dir, 'system.img')
+    if temp_raw:
+        os.replace(temp_raw, out_path)
+    else:
+        with tempfile.TemporaryDirectory(
+                prefix='lp-system-', dir=output_dir) as scratch:
+            candidate = os.path.join(scratch, 'system.img')
+            shutil.copyfile(active_path, candidate)
+            os.replace(candidate, out_path)
+    return out_path
+
+
 def unpack_super(
     super_path: str,
     output_dir: str,
     target_partitions: Optional[Set[str]] = None,
-    logger=None
+    logger=None,
+    metadata_path: Optional[str] = None
 ) -> List[str]:
     """Extract dynamic partitions from a raw or sparse super.img."""
     if not os.path.isfile(super_path):
@@ -235,6 +271,17 @@ def unpack_super(
         with open(active_path, 'rb') as f:
             partitions = read_lp_metadata(f)
             if partitions is None:
+                f.close()
+                targets = ({p.lower() for p in target_partitions}
+                           if target_partitions else None)
+                if metadata_path:
+                    system_path = _extract_system_payload(
+                        active_path, output_dir, metadata_path, temp_raw,
+                        targets)
+                    if system_path:
+                        if logger:
+                            logger('Extracting system from super.img...')
+                        return [system_path]
                 if logger:
                     logger("No valid LP metadata found in super.img")
                 return []
