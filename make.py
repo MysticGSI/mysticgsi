@@ -1166,51 +1166,26 @@ class RomPorter:
 
     # Multi-model firmware ships per-model props next to the generic one;
     # prefer the one matching the model the generic prop names.
-    def _get_odm_prop(self) -> SettingsProp | None:
-        if 'odm' in self.props:
-            return self.props['odm']
-
-        odm = self.partition_dirs.get("odm")
-        if not odm:
+    def _get_part_prop(self, part_name:str)  -> SettingsProp | None:
+        if part_name in self.props:
+            return self.props[part_name]
+        part = self.partition_dirs.get(part_name)
+        if not part:
             return None
-
-        if not os.path.exists(os.path.join(odm, "etc/build.prop")):
+        if not os.path.exists(os.path.join(part, "etc/build.prop" if part_name == 'odm' else "build.prop")):
             return None
-
         prop = SettingsProp()
-        prop.init_from_file(os.path.join(odm, 'etc/build.prop'))
-
+        prop.init_from_file(os.path.join(part, 'etc/build.prop' if part_name == 'odm' else 'build.prop'))
         model = prop.get_device_model()
-        for name in (f"etc/{model}_build.prop", f"etc/{model}.build.prop"):
-            if os.path.exists(os.path.join(odm, name)):
-                prop.init_from_file(os.path.join(odm, name))
-                break
-
-        self.props['odm'] = prop
-
-        return prop
-
-    def _get_vendor_prop(self) -> SettingsProp | None:
-        if 'vendor' in self.props:
-            return self.props['vendor']
-
-        vendor = self.partition_dirs.get("vendor")
-        if not vendor:
-            return None
-
-        if not os.path.exists(os.path.join(vendor, "build.prop")):
-            return None
-
-        prop = SettingsProp()
-        prop.init_from_file(os.path.join(vendor, 'build.prop'))
-
-        model_prop = os.path.join(
-            vendor, f"build_{prop.get_device_model()}.prop")
-        if os.path.exists(model_prop):
-            prop.init_from_file(model_prop)
-
-        self.props['vendor'] = prop
-
+        if part_name == 'odm':
+            for name in (f"etc/{model}_build.prop", f"etc/{model}.build.prop"):
+                if os.path.exists(os.path.join(part, name)):
+                    prop.init_from_file(os.path.join(part, name))
+        else:
+            model_prop = os.path.join(part, f"build_{model}.prop")
+            if os.path.exists(model_prop):
+                prop.init_from_file(model_prop)
+        self.props[part_name] = prop
         return prop
 
     def _get_partition_prop(self, partition: str) -> SettingsProp | None:
@@ -1218,7 +1193,7 @@ class RomPorter:
             return None
 
         if partition == "odm":
-            return self._get_odm_prop()
+            return self._get_part_prop('odm')
 
         if partition in self.props:
             return self.props[partition]
@@ -1343,7 +1318,7 @@ class RomPorter:
 
     def _get_build_fingerprint(self) -> str:
         return self._first_prop(
-            (self._get_odm_prop(), cast(SettingsProp, self._get_partition_prop("product")),
+            (self._get_part_prop('odm'), cast(SettingsProp, self._get_partition_prop("product")),
              cast(SettingsProp, self._get_partition_prop("system"))),
             SettingsProp.get_build_fingerprint, "")
 
@@ -1362,43 +1337,43 @@ class RomPorter:
 
     def _get_build_tags(self) -> str:
         return self._first_prop(
-            (self._get_odm_prop(), cast(SettingsProp, self._get_partition_prop("product")),
+            (self._get_part_prop('odm'), cast(SettingsProp, self._get_partition_prop("product")),
              cast(SettingsProp, self._get_partition_prop("system"))),
             SettingsProp.get_build_tags, "")
 
     def _get_device_brand(self) -> str:
         return self._first_prop(
-            (self._get_odm_prop(), self._get_vendor_prop(),
+            (self._get_part_prop('odm'), self._get_part_prop('vendor'),
              cast(SettingsProp, self._get_partition_prop("product")), cast(SettingsProp, self._get_partition_prop("system"))),
             SettingsProp.get_device_brand, "unknown")
 
     def _get_device_model(self) -> str:
-        odm_prop = self._get_odm_prop()
+        odm_prop = self._get_part_prop('odm')
         if odm_prop:
             val = odm_prop.get_market_name() or odm_prop.get_device_model()
             if val:
                 return val
 
         return self._first_prop(
-            (self._get_vendor_prop(), cast(SettingsProp, self._get_partition_prop("product")),
+            (self._get_part_prop('vendor'), cast(SettingsProp, self._get_partition_prop("product")),
              cast(SettingsProp, self._get_partition_prop("system"))),
             SettingsProp.get_device_model, "unknown")
 
     def _get_device_codename(self) -> str:
         return self._first_prop(
-            (self._get_odm_prop(), cast(SettingsProp, self._get_partition_prop("product")),
-             self._get_vendor_prop(), cast(SettingsProp, self._get_partition_prop("system"))),
+            (self._get_part_prop('odm'), cast(SettingsProp, self._get_partition_prop("product")),
+             self._get_part_prop('vendor'), cast(SettingsProp, self._get_partition_prop("system"))),
             SettingsProp.get_device_name, "unknown")
 
     def _get_device_manufacturer(self) -> str:
         return self._first_prop(
-            (self._get_odm_prop(), cast(SettingsProp, self._get_partition_prop("system")),
-             cast(SettingsProp, self._get_partition_prop("product")), self._get_vendor_prop()),
+            (self._get_part_prop('odm'), cast(SettingsProp, self._get_partition_prop("system")),
+             cast(SettingsProp, self._get_partition_prop("product")), self._get_part_prop('vendor')),
             SettingsProp.get_device_manufacturer, "unknown")
 
     def _get_device(self) -> str:
         return self._first_prop(
-            (self._get_odm_prop(), self._get_vendor_prop(),
+            (self._get_part_prop('odm'), self._get_part_prop('vendor'),
              cast(SettingsProp, self._get_partition_prop("product")), cast(SettingsProp, self._get_partition_prop("system"))),
             SettingsProp.get_device, "unknown")
 
@@ -1732,7 +1707,7 @@ class RomPorter:
             system = self._get_system_root()
             system_dir = self.partition_dirs['system']
             vendor = self.partition_dirs.get("vendor")
-            vendor_prop = self._get_vendor_prop()
+            vendor_prop = self._get_part_prop('vendor')
 
             android_version = str(cast(SettingsProp, self._get_partition_prop("system")).get_android_version())
             android_sdk = str(cast(SettingsProp, self._get_partition_prop("system")).get_sdk_version())
