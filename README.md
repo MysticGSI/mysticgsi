@@ -15,12 +15,13 @@ Works on macOS, Ubuntu/Debian, Arch and NixOS.
 
 ```sh
 git clone https://github.com/MysticGSI/mysticgsi.git && cd mysticgsi
-./setup.sh          # --dev also installs pytest and flake8
+./setup_host.py     # --dev also installs pytest and flake8
 ```
 
 The script installs the system packages, creates `.venv` and makes sure
 `mke2fs.android` and `e2fsdroid` are available (building them if needed).
-On NixOS it prepares the flake instead; use `nix develop` there.
+It needs a `python3` to start from; on a minimal Arch install run
+`sudo pacman -S python` first. On NixOS skip it and use `nix develop`.
 
 You need erofs-utils 1.5+ for EROFS firmware (Ubuntu 24.04 or newer) and about
 20 GB of free space per build.
@@ -70,7 +71,8 @@ python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-Then install [apktool](#apktool-on-linux), or `apktool` from the AUR.
+Then install [apktool](#apktool-on-linux), or `android-apktool-bin` from the AUR
+(it needs `jre-openjdk` in place of `jre-openjdk-headless`).
 
 </details>
 

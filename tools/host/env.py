@@ -73,4 +73,4 @@ def check_environment() -> None:
 
     raise RuntimeError(
         f"Missing native image tools: {', '.join(missing)}. "
-        "Run ./setup.sh first.")
+        "Run ./setup_host.py first.")

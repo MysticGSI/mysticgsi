@@ -6,7 +6,7 @@ fixes are all welcome.
 ## Getting started
 
 ```sh
-./setup.sh --dev
+./setup_host.py --dev
 .venv/bin/python -m pytest tests -q
 .venv/bin/python -m flake8
 ```

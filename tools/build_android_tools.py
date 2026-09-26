@@ -2,7 +2,7 @@
 """
 Builds mke2fs.android and e2fsdroid from nmeum/android-tools into tools/bin,
 for hosts with no packaged copy (macOS, Debian/Ubuntu).
-setup.sh installs the build dependencies.
+setup_host.py installs the build dependencies.
 """
 
 import hashlib
@@ -76,7 +76,7 @@ def build():
     missing = [c for c in REQUIRED_COMMANDS if not shutil.which(c)]
     if missing:
         raise RuntimeError(
-            f"Missing {', '.join(missing)}; run ./setup.sh first")
+            f"Missing {', '.join(missing)}; run ./setup_host.py first")
 
     cache = ROOT / "tmp" / "android-tools-src"
     cache.mkdir(parents=True, exist_ok=True)
