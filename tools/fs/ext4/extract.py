@@ -35,7 +35,7 @@ def _write_symlink(fs, inode, path):
     try:
         os.symlink(target, path)
     except OSError:
-        with open(path + ".symlink", 'w', encoding='utf-8',
+        with open(f"{path}.symlink", 'w', encoding='utf-8',
                   errors='surrogateescape') as f:
             f.write(target)
 

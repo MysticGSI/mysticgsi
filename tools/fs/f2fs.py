@@ -49,3 +49,4 @@ def extract_f2fs(image_path: str, output_dir: str, logger=None) -> bool:
             os.rmdir(mountdir)
         except OSError:
             pass
+    return True

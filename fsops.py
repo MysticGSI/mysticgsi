@@ -20,7 +20,7 @@ def run(argv, *, cwd=None, stdin=None):
             fh.close()
 
 
-def _allocated(st):
+def _allocated(st: os.stat_result):
     blocks = getattr(st, "st_blocks", None)
     if blocks is None:
         return -(-st.st_size // BLOCK) * BLOCK

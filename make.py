@@ -1905,7 +1905,7 @@ Architecture: {self._architecture()}
         return self.rom_type in ('miui', 'hyperos', 'joyui')
 
     def _is_google_pixel_rom(self):
-        return self.rom_type in ('pixel')
+        return self.rom_type in ['pixel']
 
     def _is_zte_rom(self):
         # NebulaOS isn't ZTE but takes the same patches.
