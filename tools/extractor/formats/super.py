@@ -169,22 +169,37 @@ def is_super_image(file_path: str) -> bool:
 
 
 def _write_partition(f, part: LpPartition, out_path: str):
+    with tempfile.TemporaryDirectory(
+            prefix='lp-partition-', dir=os.path.dirname(out_path)) as scratch:
+        candidate = os.path.join(scratch, 'partition.img')
+        _copy_partition(f, part, candidate)
+        os.replace(candidate, out_path)
+
+
+def _copy_partition(f, part: LpPartition, out_path: str):
     with open(out_path, 'wb') as out_f:
         out_size = 0
         for ext in part.extents:
             if ext.target_type == LP_TARGET_TYPE_LINEAR:
+                if ext.target_source != 0:
+                    raise RuntimeError(
+                        f"Unsupported LP block device for {part.name}")
                 f.seek(ext.file_offset)
                 remaining = ext.num_bytes
                 while remaining > 0:
                     buf = f.read(min(remaining, MB))
                     if not buf:
-                        break
+                        raise RuntimeError(
+                            f"Truncated LP extent for {part.name}")
                     out_f.write(buf)
                     remaining -= len(buf)
                     out_size += len(buf)
             elif ext.target_type == LP_TARGET_TYPE_ZERO:
                 out_f.seek(ext.num_bytes, os.SEEK_CUR)
                 out_size += ext.num_bytes
+            else:
+                raise RuntimeError(
+                    f"Unsupported LP extent type for {part.name}")
         out_f.truncate(out_size)
 
 
@@ -201,6 +216,7 @@ def unpack_super(
     os.makedirs(output_dir, exist_ok=True)
     temp_raw = None
     active_path = super_path
+    supplied = None
 
     try:
         if sparse.is_sparse(super_path):
@@ -209,7 +225,8 @@ def unpack_super(
             fd, temp_raw = tempfile.mkstemp(
                 prefix="super_raw_", suffix=".img", dir=output_dir)
             os.close(fd)
-            if not sparse.unsparse(super_path, temp_raw):
+            supplied = []
+            if not sparse.unsparse(super_path, temp_raw, supplied=supplied):
                 if logger:
                     logger("Failed to unsparse super.img")
                 return []
@@ -232,6 +249,13 @@ def unpack_super(
                         and base_name.lower() not in targets):
                     continue
                 if part.num_bytes == 0:
+                    continue
+                if supplied is not None and not any(
+                        left < ext.file_offset + ext.num_bytes
+                        and right > ext.file_offset
+                        for ext in part.extents
+                        if ext.target_type == LP_TARGET_TYPE_LINEAR
+                        for left, right in supplied):
                     continue
                 # With both slots populated, slot a is the one postprocess
                 # keeps; extracting b too only wastes time and disk.

@@ -1,6 +1,6 @@
 """Android sparse image to raw image converter."""
 
-from typing import List, Union
+from typing import List, Optional, Tuple, Union
 import os
 import struct
 import tempfile
@@ -60,9 +60,10 @@ def _fill(out_f, pattern: bytes, size: int, buffer_size: int) -> int:
     return written
 
 
-def _write_chunks(in_f, out_f, header, buffer_size: int):
+def _write_chunks(in_f, out_f, header, buffer_size: int, supplied=None):
     (_, _, _, file_hdr_sz, chunk_hdr_sz, blk_sz, _, total_chunks, _) = header
     written_blocks = 0
+    output_start = out_f.tell()
 
     if file_hdr_sz > SPARSE_HEADER_SIZE:
         in_f.seek(file_hdr_sz - SPARSE_HEADER_SIZE, os.SEEK_CUR)
@@ -103,13 +104,18 @@ def _write_chunks(in_f, out_f, header, buffer_size: int):
                 raise RuntimeError("Truncated sparse CRC32 chunk")
         else:
             raise RuntimeError(f"Unknown sparse chunk type: {chunk_type}")
+        if supplied is not None and chunk_type in (
+                CHUNK_TYPE_RAW, CHUNK_TYPE_FILL):
+            supplied.append((output_start + written_blocks * blk_sz,
+                             output_start
+                             + (written_blocks + chunk_sz) * blk_sz))
         written_blocks += chunk_sz
     if written_blocks != header[6]:
         raise RuntimeError("Sparse block count does not match header")
 
 
 def expand(in_f, out_f, offset: int = 0,
-           buffer_size: int = BUFFER_SIZE) -> int:
+           buffer_size: int = BUFFER_SIZE, supplied=None) -> int:
     """
     Writes the sparse image read from in_f (positioned at its header) into
     out_f at offset, or copies in_f verbatim if it isn't sparse. Returns
@@ -126,13 +132,15 @@ def expand(in_f, out_f, offset: int = 0,
             raise RuntimeError("Truncated sparse image header")
         in_f.seek(start)
         _copy_all(in_f, out_f, buffer_size)
+        if supplied is not None:
+            supplied.append((offset, out_f.tell()))
         return out_f.tell()
 
     if (header[1] != 1 or header[3] < SPARSE_HEADER_SIZE
             or header[4] < CHUNK_HEADER_SIZE
             or header[5] <= 0 or header[5] % 4 or buffer_size < 4):
         raise RuntimeError("Invalid sparse image header")
-    _write_chunks(in_f, out_f, header, buffer_size)
+    _write_chunks(in_f, out_f, header, buffer_size, supplied)
     blk_sz, total_blks = header[5], header[6]
     return max(out_f.tell(), offset + blk_sz * total_blks)
 
@@ -140,11 +148,13 @@ def expand(in_f, out_f, offset: int = 0,
 def unsparse(
     input_files: Union[str, List[str]],
     output_file: str,
-    buffer_size: int = BUFFER_SIZE
+    buffer_size: int = BUFFER_SIZE,
+    supplied: Optional[List[Tuple[int, int]]] = None
 ) -> bool:
     """
     Unsparse one image, or a list of split chunks (e.g. Motorola
     sparsechunks), into a single raw image. Non-sparse inputs are appended.
+    If supplied is given, append output ranges backed by RAW/FILL chunks.
     """
     if isinstance(input_files, str):
         input_files = [input_files]
@@ -165,7 +175,8 @@ def unsparse(
                     # Each sparse file describes the whole image and skips
                     # the regions supplied by the other split chunks.
                     offset = 0 if is_sparse(in_file) else end
-                    end = max(end, expand(in_f, out_f, offset, buffer_size))
+                    end = max(end, expand(in_f, out_f, offset, buffer_size,
+                                          supplied))
             out_f.truncate(end)
         if end == 0:
             return False

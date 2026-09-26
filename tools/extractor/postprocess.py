@@ -192,13 +192,32 @@ def postprocess_extracted_images(
     _rebuild_sdat(staging_dir, logger)
     _merge_sparse_chunks(staging_dir, logger)
 
-    for s_img in (_staged(staging_dir, "*super*.img")
-                  + _staged(staging_dir, "*super*.bin")):
-        if os.path.isfile(s_img):
-            lp_super.unpack_super(
-                s_img, staging_dir, target_partitions=target_partitions,
+    super_images = (_staged(staging_dir, "**/*super*.img")
+                    + _staged(staging_dir, "**/*super*.bin"))
+    for s_img in super_images:
+        if not os.path.isfile(s_img):
+            continue
+        with tempfile.TemporaryDirectory(
+                prefix='super-partitions-', dir=staging_dir) as scratch:
+            extracted = lp_super.unpack_super(
+                s_img, scratch, target_partitions=target_partitions,
                 logger=logger)
-            _remove(s_img)
+            for path in extracted:
+                name = normalize_partition_filename(os.path.basename(path))
+                destination = os.path.join(staging_dir, name)
+                candidate = os.path.join(scratch, 'converted.img')
+                _finalize_image(path, candidate, logger)
+                if os.path.exists(destination):
+                    previous = os.path.join(scratch, 'previous.img')
+                    _finalize_image(destination, previous, logger)
+                    os.replace(previous, destination)
+                # Factory supers can contain empty customization filesystems
+                # alongside a populated version in a separate Open image.
+                if (not os.path.exists(destination)
+                        or os.path.getsize(candidate)
+                        > os.path.getsize(destination)):
+                    os.replace(candidate, destination)
+        _remove(s_img)
 
     all_files = [os.path.join(root, f)
                  for root, _, files in os.walk(staging_dir) for f in files]

@@ -81,9 +81,17 @@ def extract_archive(
 
 
 def _claim(output_dir: str, member: str, claimed: Set[str], logger):
-    """Target path for member, or None if its basename is already taken."""
+    """Keep duplicate super pieces; skip other duplicate basenames."""
     base = os.path.basename(member)
     if base in claimed:
+        if 'super' in base.lower() and base.lower().endswith(('.img', '.bin')):
+            index = 1
+            while True:
+                folder = os.path.join(output_dir, f'super-members-{index}')
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                    return os.path.join(folder, base)
+                index += 1
         if logger:
             logger(f"Warning: skipping {member}; {base} was already "
                    "extracted from another folder")

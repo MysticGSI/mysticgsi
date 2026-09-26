@@ -1,10 +1,13 @@
 import hashlib
 import os
 import struct
+import zipfile
 
 import pytest
 
 from tools.extractor.formats import super as lp_super
+from tools.extractor import extract_firmware
+from tools.extractor.formats import sparse
 
 SECTOR = 512
 MAX_SIZE = 65536
@@ -84,6 +87,63 @@ def test_unpack_follows_extents_and_skips_redundant_slot(tmp_path):
         bytes(4 * SECTOR) + vendor_tail
 
 
+def _sparse_super(raw, supplied_blocks):
+    block_size = 4096
+    chunks = []
+    for index in range(len(raw) // block_size):
+        if index < DATA_START // block_size or index in supplied_blocks:
+            data = raw[index * block_size:(index + 1) * block_size]
+            kind = sparse.CHUNK_TYPE_RAW
+        else:
+            data = b''
+            kind = sparse.CHUNK_TYPE_DONT_CARE
+        chunks.append(struct.pack('<2H2I', kind, 0, 1, 12 + len(data))
+                      + data)
+    return struct.pack(
+        '<I4H4I', sparse.SPARSE_HEADER_MAGIC, 1, 0, 28, 12,
+        block_size, len(raw) // block_size, len(chunks), 0) + b''.join(chunks)
+
+
+@pytest.mark.parametrize('reverse', [False, True])
+def test_archive_combines_supers_with_different_layouts(tmp_path, reverse):
+    first = DATA_START // SECTOR
+    system = os.urandom(4096)
+    product = os.urandom(8192)
+    mi = os.urandom(8192)
+    placeholder = os.urandom(4096)
+    image = tmp_path / 'raw.img'
+    _build_super(image, [
+        ('system_a', [(8, lp_super.LP_TARGET_TYPE_LINEAR, first)]),
+        ('tr_product_a', [(8, lp_super.LP_TARGET_TYPE_LINEAR, first + 8)]),
+        ('tr_mi_a', [(16, lp_super.LP_TARGET_TYPE_LINEAR, first + 16)]),
+    ], [(first, system), (first + 8, placeholder), (first + 16, mi)])
+    raw = image.read_bytes()
+    block = DATA_START // 4096
+    _build_super(image, [
+        ('system_a', [(8, lp_super.LP_TARGET_TYPE_LINEAR, first)]),
+        ('tr_product_a', [(16, lp_super.LP_TARGET_TYPE_LINEAR, first + 32)]),
+        ('tr_mi_a', [(8, lp_super.LP_TARGET_TYPE_LINEAR, first + 48)]),
+    ], [(first + 32, product), (first + 48, placeholder)])
+    members = [
+        ('Firmware/Open/super.img', _sparse_super(
+            image.read_bytes(), {block + 4, block + 5, block + 6})),
+        ('Firmware/super.img', _sparse_super(
+            raw, {block, block + 1, block + 2, block + 3})),
+    ]
+    if reverse:
+        members.reverse()
+    source = tmp_path / 'firmware.zip'
+    with zipfile.ZipFile(source, 'w') as archive:
+        for name, data in members:
+            archive.writestr(name, data)
+    output = tmp_path / 'out'
+
+    assert extract_firmware(str(source), str(output)) == 0
+    assert (output / 'system.img').read_bytes() == system
+    assert (output / 'tr_product.img').read_bytes() == product
+    assert (output / 'tr_mi.img').read_bytes() == mi
+
+
 # 60 lands in the header, 200 in the partition/extent tables.
 @pytest.mark.parametrize("corrupt_at", [60, 200])
 def test_corrupt_primary_metadata_falls_back_to_next_slot(tmp_path,
@@ -92,3 +152,23 @@ def test_corrupt_primary_metadata_falls_back_to_next_slot(tmp_path,
 
     assert names == ["system_a.img", "vendor_a.img"]
     assert (out / "system_a.img").read_bytes() == system
+
+
+def test_truncated_extent_preserves_previous_partition(tmp_path):
+    first = DATA_START // SECTOR
+    image = tmp_path / 'super.img'
+    _build_super(image, [
+        ('system_a', [(8, lp_super.LP_TARGET_TYPE_LINEAR, first)]),
+    ], [(first, b'a' * SECTOR)])
+    with image.open('r+b') as stream:
+        stream.truncate(DATA_START + SECTOR)
+    output = tmp_path / 'out'
+    output.mkdir()
+    previous = output / 'system_a.img'
+    previous.write_bytes(b'previous image')
+
+    with pytest.raises(RuntimeError, match='Truncated LP extent'):
+        lp_super.unpack_super(str(image), str(output))
+
+    assert previous.read_bytes() == b'previous image'
+    assert list(output.iterdir()) == [previous]
