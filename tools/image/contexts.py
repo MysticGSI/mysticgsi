@@ -158,6 +158,6 @@ def prepare_file_contexts(system_dir: str, output_file: str) -> Optional[str]:
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
     with open(output_file, 'w', encoding='utf-8') as f:
-        f.writelines(ctx + "\n" for ctx in contexts)
+        f.writelines(f"{ctx}\n" for ctx in contexts)
 
     return output_file

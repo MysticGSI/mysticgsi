@@ -48,7 +48,7 @@ def clean_vendor_ext4_header(image_path: str, logger=None) -> bool:
         logger(f"Stripping {vendor} header at offset {offset} "
                f"from {os.path.basename(image_path)}...")
 
-    temp_path = image_path + ".clean.tmp"
+    temp_path = f"{image_path}.clean.tmp"
     try:
         with open(image_path, 'rb') as src, open(temp_path, 'wb') as dst:
             src.seek(offset)
@@ -84,7 +84,7 @@ def clean_signed_image(image_path: str, logger=None) -> bool:
         logger(f"Stripping signed header ({magic.decode('latin1')}) "
                f"from {os.path.basename(image_path)}...")
 
-    temp_path = image_path + ".signed.tmp"
+    temp_path = f"{image_path}.signed.tmp"
     try:
         with open(image_path, 'rb') as src, open(temp_path, 'wb') as dst:
             src.seek(payload_offset)

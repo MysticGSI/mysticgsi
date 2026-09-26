@@ -62,7 +62,7 @@ def _unpack_outer_archive(archive_path, staging_dir, targets, log):
         name = os.path.basename(path)
         if ozip.is_ozip(path):
             log(f"Decrypting nested OZIP {name}...")
-            dec_zip = path + ".decrypted.zip"
+            dec_zip = f"{path}.decrypted.zip"
             if not ozip.decrypt_ozip(path, dec_zip, logger=log):
                 raise RuntimeError(f"Failed to decrypt nested OZIP {name}")
             _remove(path)

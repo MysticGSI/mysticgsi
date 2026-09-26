@@ -116,9 +116,9 @@ AB_FILES = [
 ]
 
 USB_DEBUGGING_PROPS = [
-    (r"ro.debuggable=0", r"ro.debuggable=1"),
-    (r"ro.secure=1", r"ro.secure=0"),
-    (r"ro.adb.secure=1", r"ro.adb.secure=0"),
+    ("ro.debuggable=0", "ro.debuggable=1"),
+    ("ro.secure=1", "ro.secure=0"),
+    ("ro.adb.secure=1", "ro.adb.secure=0"),
 ]
 
 
@@ -133,9 +133,7 @@ class SettingsProp:
         with open(self.path, "r") as f:
             data = f.read()
             for i in data.split("\n"):
-                if i.startswith("#"):
-                    continue
-                if i == '':
+                if i.startswith("#") or not i:
                     continue
 
                 key, sep, value = i.partition("=")
@@ -143,18 +141,15 @@ class SettingsProp:
                     self.values[key] = value
 
     def get_value(self, key) -> str | None:
-        if key in self.values:
-            return self.values[key]
-        return None
+        return self.values.get(key)
 
     def first_of(self, *keys):
         """Like `get_value(a) or get_value(b) or ...`."""
-        value = None
         for key in keys:
-            value = self.get_value(key)
+            value = self.values.get(key)
             if value:
-                break
-        return value
+                return value
+        return None
 
     def starts_with(self, key):
         dictionary = {}
@@ -171,9 +166,7 @@ class SettingsProp:
         return [k for k in keys if k in self.values]
 
     def is_true(self, key: str) -> bool:
-        value = self.get_value(key)
-
-        return value in ('1', 'true')
+        return self.values.get(key) in ('1', 'true')
 
     def is_false(self, key: str) -> bool:
         return not self.is_true(key)
@@ -244,10 +237,10 @@ class SettingsProp:
             "ro.product.product.manufacturer")
 
     def get_android_version(self):
-        codename = self.get_value("ro.build.version.codename")
-        known_codenames = self.get_value("ro.build.version.known_codenames")
+        codename = self.values.get("ro.build.version.codename")
+        known_codenames = self.values.get("ro.build.version.known_codenames")
         if known_codenames and codename and str(codename) in known_codenames:
-            return self.get_value("ro.build.version.codename")
+            return self.values.get("ro.build.version.codename")
 
         raw = self.first_of(
             "ro.system.build.version.release",
@@ -273,7 +266,7 @@ class SettingsProp:
             "ro.system.build.fingerprint")
 
     def get_build_flavor(self):
-        return self.get_value("ro.build.flavor")
+        return self.values.get("ro.build.flavor")
 
     def get_security_patch(self):
         return self.first_of(
@@ -294,11 +287,11 @@ class SettingsProp:
             "ro.board.platform", "ro.product.board") or "unknown"
 
     def get_oneui_version(self) -> str | None:
-        return self.get_value("ro.build.version.oneui")
+        return self.values.get("ro.build.version.oneui")
 
     def get_hyperos_version(self) -> str:
         if self.exists("ro.mi.os.version.incremental"):
-            version = str(self.get_value("ro.mi.os.version.incremental"))
+            version = str(self.values.get("ro.mi.os.version.incremental"))
             return version.split('OS')[1]
 
         return ""
@@ -725,15 +718,15 @@ class RomPorter:
 
     def _patch_framework_jars(self):
         if not ((self.rom_type in ("miui", "hyperos")
-                 and self._is_android_14())
-                or (self.rom_type == "nothing" and self._is_android_13())):
+                 and self._is_android_version(14))
+                or (self.rom_type == "nothing" and self._is_android_version(13))):
             return
         with tempfile.TemporaryDirectory(prefix="framework-",
                                          dir=self.work_dir) as workdir:
             self._patch_frameworks(os.path.abspath(workdir))
 
     def _patch_xiaomi_frameworks(self, workdir):
-        if not self._is_android_14():
+        if not self._is_android_version(14):
             return
 
         # Fix of brightness bug that appears in ports from Xiaomi 14 (HyperOS 1.0 only)
@@ -775,7 +768,7 @@ class RomPorter:
         system = self._get_system_root()
         services_path = os.path.join(system, 'framework', 'services.jar')
 
-        if not self._is_android_13():
+        if not self._is_android_version(13):
             return
 
         out_dir = os.path.join(workdir, "services.jar.out")
@@ -930,9 +923,9 @@ class RomPorter:
                 continue
 
             partition_dir = self.partition_dirs[partition]
-            partition_prop_path = partition_dir + "/build.prop"
+            partition_prop_path = f"{partition_dir}/build.prop"
             if not os.path.exists(partition_prop_path):
-                partition_prop_path = partition_dir + "/etc/build.prop"
+                partition_prop_path = f"{partition_dir}/etc/build.prop"
                 if not os.path.exists(partition_prop_path):
                     continue
 
@@ -957,7 +950,7 @@ class RomPorter:
                               f"{systemdir}/system/build.prop")
 
             system_prop = SettingsProp()
-            system_prop.init_from_file(systemdir + "/system/build.prop")
+            system_prop.init_from_file(f"{systemdir}/system/build.prop")
 
             self.props['system'] = system_prop
 
@@ -1085,7 +1078,7 @@ class RomPorter:
         system = os.path.join(system_dir, "system")
 
         device_features_path = os.path.join(product, "etc/device_features")
-        if self._is_android_11():
+        if self._is_android_version(11):
             device_features_path = (f"{self.partition_dirs['system']}"
                                     "/mystic/device_features")
         elif not self._is_android_at_least(10):
@@ -1150,7 +1143,7 @@ class RomPorter:
         if system_ext:
             fsops.rmrf(os.path.join(system_ext, "bin/hw", audio_parser))
             fsops.rmrf(os.path.join(system_ext, "etc/init",
-                                    audio_parser + ".rc"))
+                                    f"{audio_parser}.rc"))
 
         # Replacing the boot animation with the dark variant.
         dark_bootanimation_path = os.path.join(
@@ -1349,47 +1342,8 @@ class RomPorter:
         except (ValueError, TypeError):
             return False
 
-    def _is_android_at_least_11(self) -> bool:
-        return self._is_android_at_least(11)
-
-    def _is_android_at_least_12(self) -> bool:
-        return self._is_android_at_least(12)
-
-    def _is_android_at_least_13(self) -> bool:
-        return self._is_android_at_least(13)
-
-    def _is_android_at_least_14(self) -> bool:
-        return self._is_android_at_least(14)
-
-    def _is_android_at_least_15(self) -> bool:
-        return self._is_android_at_least(15)
-
-    def _is_android_at_least_16(self) -> bool:
-        return self._is_android_at_least(16)
-
-    def _is_android_at_least_17(self) -> bool:
-        return self._is_android_at_least(17)
-
-    def _is_android_11(self) -> bool:
-        return self._is_android_version(11)
-
-    def _is_android_12(self) -> bool:
-        return self._is_android_version(12)
-
-    def _is_android_13(self) -> bool:
-        return self._is_android_version(13)
-
-    def _is_android_14(self) -> bool:
-        return self._is_android_version(14)
-
-    def _is_android_15(self) -> bool:
-        return self._is_android_version(15)
-
-    def _is_android_16(self) -> bool:
-        return self._is_android_version(16)
-
-    def _is_android_17(self) -> bool:
-        return self._is_android_version(17)
+    # _is_android_at_least_11 == self._is_android_at_least(11)
+    # _is_android_11 == _is_android_version(11)
 
     def _first_prop(self, props, getter, default):
         for prop in props:
@@ -2034,7 +1988,7 @@ Architecture: {self._architecture()}
         if system_size is None:
             return None
 
-        stale_zip = self.output_path + ".zip"
+        stale_zip = f"{self.output_path}.zip"
         if os.path.exists(stale_zip):
             os.remove(stale_zip)
         self._set_recorded_size(f"out/{self.rom_name}/output.txt",
@@ -2054,7 +2008,7 @@ Architecture: {self._architecture()}
             f.write(replace_image_size(text, system_size))
 
     def compress_output(self):
-        destination = self.output_path + ".zip"
+        destination = f"{self.output_path}.zip"
         try:
             with tempfile.TemporaryDirectory(
                     prefix="compress-",
@@ -2065,7 +2019,7 @@ Architecture: {self._architecture()}
                                      compression=zipfile.ZIP_DEFLATED,
                                      compresslevel=6,
                                      allowZip64=True) as package:
-                    package.write(self.output_path + ".img",
+                    package.write(f"{self.output_path}.img",
                                   arcname="system.img")
 
                 if (not os.path.isfile(archive)

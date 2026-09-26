@@ -39,7 +39,7 @@ def _assemble(pieces, out_path: str):
     """Writes each (start_sector, sector_size, path) piece at its offset."""
     first = min(start for start, _, _ in pieces)
     # A piece may itself be named <part>.img, so build next to it.
-    tmp_path = out_path + ".qfil.tmp"
+    tmp_path = f"{out_path}.qfil.tmp"
     end = 0
     with open(tmp_path, 'wb') as out_f:
         for start, sector_size, path in sorted(pieces):

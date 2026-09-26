@@ -71,7 +71,7 @@ def _is_tar(path: str) -> bool:
 
 def _extract_tar(sin_path: str, out_path: str) -> bool:
     """Newer SINs are tar archives of (optionally LZ4) payload pieces."""
-    raw_path = out_path + ".sin.tmp"
+    raw_path = f"{out_path}.sin.tmp"
     try:
         with tarfile.open(sin_path) as tar, open(raw_path, 'wb') as raw:
             members = sorted(

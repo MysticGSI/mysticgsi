@@ -113,7 +113,7 @@ def build():
 
     DESTINATION.mkdir(parents=True, exist_ok=True)
     for name in TARGETS:
-        staged = DESTINATION / (name + ".new")
+        staged = DESTINATION / f"{name}.new"
         shutil.copy2(build_dir / "vendor" / name, staged)
         staged.replace(DESTINATION / name)
     print(f"Native image tools installed in {DESTINATION}")

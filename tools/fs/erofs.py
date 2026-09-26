@@ -12,7 +12,7 @@ TOOLS = ("extract.erofs", "fsck.erofs")
 BREW_PREFIXES = ("/opt/homebrew/bin", "/usr/local/bin")
 
 
-def find_erofs_tool() -> Optional[Tuple[str, str]]:
+def find_erofs_tool() -> Optional[Tuple[str, str]] | None:
     """Returns (path, tool name) of the first available EROFS extractor."""
     for name in TOOLS:
         found = shutil.which(name)
