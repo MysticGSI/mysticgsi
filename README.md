@@ -113,7 +113,7 @@ export PATH="$HOME/.local/bin:$PATH"
 ## Usage
 
 ```sh
-.venv/bin/python cli.py build <name> <firmware or URL> --type <type> [--compress] [--avb-key /path/to/key.pem] [--add <tag>]
+.venv/bin/python cli.py build <name> <firmware|URL> [--type <type>] [--compress]
 .venv/bin/python cli.py rebuild <name> [--compress]
 .venv/bin/python cli.py list
 .venv/bin/python cli.py clean
@@ -133,7 +133,7 @@ clean - Clean up all builds
 ```sh
 name - Name of the build
 firmware or URL - Path to the firmware or URL to download it from
---type <type> - Type of the ROM to build (alos, hyperos, coloros, oneui, pixel, ...)
+--type <type> - ROM type; default is auto (use an explicit type if detection fails)
 --compress - Compress the output image into a ZIP
 --add <tag> - Add a tag to the build name
 --no-debloat - Keep the apps the patch set would otherwise remove

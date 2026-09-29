@@ -459,6 +459,10 @@ class RomPorter:
         if self.rom_type not in ("generic", "custom", "auto"):
             return
 
+        if self.override_rom_type != "default":
+            self.rom_type = self.override_rom_type
+            return
+
         custom_rom_props = {
             "lineageOS": ["ro.lineage.build.version"],
             "evolutionx": ["org.evolution.build_version"],
@@ -471,19 +475,77 @@ class RomPorter:
 
         system_prop = self._get_partition_prop("system")
         product_prop = self._get_partition_prop("product")
-
-        if self.override_rom_type != "default":
-            self.rom_type = self.override_rom_type
-            return
+        props = (system_prop, product_prop)
 
         for rom, value in custom_rom_props.items():
-            for prop in (system_prop, product_prop):
+            for prop in props:
                 if not prop:
                     continue
                 for key in value:
                     if prop.exists(key):
                         self.rom_type = rom
                         return
+
+        if self.rom_type != "auto":
+            return
+
+        vendor_rom_props = {
+            "oneui": "ro.build.version.oneui",
+            "hyperos": "ro.mi.os.version.incremental",
+            "miui": "ro.miui.ui.version.name",
+            "nothing": "ro.nothing.version.id",
+        }
+        for rom, key in vendor_rom_props.items():
+            if any(prop and prop.get_value(key) for prop in props):
+                self.rom_type = rom
+                return
+
+        brands = {
+            prop.get_device_brand().casefold()
+            for prop in props
+            if prop and prop.get_device_brand()
+        }
+        if any(
+            prop and prop.get_value("ro.build.version.oplusrom")
+            for prop in props
+        ):
+            oplus_types = {
+                "oppo": "coloros",
+                "realme": "realmeui",
+                "oneplus": "oxygenos",
+            }
+            for brand in ("oppo", "realme", "oneplus"):
+                if brand in brands:
+                    self.rom_type = oplus_types[brand]
+                    return
+
+        honor_brand = "honor" in brands
+        for partition in ("product_h", "hw_product"):
+            part_dir = self.partition_dirs.get(partition)
+            if not part_dir:
+                continue
+            local_prop_path = os.path.join(
+                part_dir, "etc", "prop", "local.prop"
+            )
+            if not os.path.isfile(local_prop_path):
+                continue
+            local_prop = SettingsProp()
+            local_prop.init_from_file(local_prop_path)
+            if partition == "product_h":
+                honor_brand = honor_brand or (
+                    (local_prop.get_device_brand() or "").casefold()
+                    == "honor"
+                )
+            version = (
+                local_prop.get_value("ro.comp.hl.product_base_version") or ""
+            ).casefold()
+            for rom in ("magicos", "harmonyos", "emui"):
+                if version.startswith(rom):
+                    self.rom_type = rom
+                    return
+
+        if self.partition_dirs.get("product_h") and honor_brand:
+            self.rom_type = "magicos"
 
     def _rom_type_name(self):
         if self.rom_type == "alos":
@@ -2158,10 +2220,19 @@ Architecture: {self._architecture()}
     def _get_board(self) -> str:
         vendor_prop = self._get_partition_prop("vendor")
         if vendor_prop:
-            return (
-                vendor_prop.first_of("ro.board.platform", "ro.product.board")
-                or "unknown"
+            board = vendor_prop.first_of(
+                "ro.board.platform", "ro.product.board"
             )
+            if board:
+                return board
+
+        h_product_prop = self.props.get("h_product")
+        if h_product_prop:
+            board = h_product_prop.first_of(
+                "ro.board.platform", "ro.product.board"
+            )
+            if board:
+                return board
 
         return "unknown"
 

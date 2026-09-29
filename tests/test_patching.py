@@ -9,6 +9,57 @@ import fsops
 from make import RomPorter, SettingsProp
 
 
+def test_rom_detection_uses_honor_partition_and_respects_precedence(tmp_path):
+    system = tmp_path / "system"
+    product = tmp_path / "product"
+    honor_product = tmp_path / "product_h"
+    (system / "system").mkdir(parents=True)
+    product.mkdir()
+    (honor_product / "etc/prop").mkdir(parents=True)
+    (system / "system/build.prop").write_text(
+        "ro.product.system.brand=Honor\n"
+    )
+    (product / "build.prop").write_text("")
+    (honor_product / "etc/prop/local.prop").write_text(
+        "ro.product.board=PTP\n"
+        "ro.product.brand=HONOR\n"
+        "ro.comp.hl.product_base_version="
+        "PTP-LGRP2-OVS 9.0.0.99(SP86log)\n"
+    )
+
+    porter = RomPorter("test")
+    porter.partition_dirs = {
+        "system": str(system),
+        "product": str(product),
+        "product_h": str(honor_product),
+    }
+
+    porter._detect_rom_type()
+    assert porter.rom_type == "magicos"
+
+    porter._patch_huawei("HONOR", "device", "unknown", "magic", str(system))
+    assert porter._get_board() == "PTP"
+
+    porter.rom_type = "auto"
+    porter._get_partition_prop("system").values[
+        "ro.product.system.brand"
+    ] = "other"
+    porter._detect_rom_type()
+    assert porter.rom_type == "magicos"
+
+    porter.rom_type = "auto"
+    porter._get_partition_prop("system").values[
+        "ro.lineage.build.version"
+    ] = "22"
+    porter._detect_rom_type()
+    assert porter.rom_type == "lineageOS"
+
+    porter.rom_type = "auto"
+    porter.override_rom_type = "pixel"
+    porter._detect_rom_type()
+    assert porter.rom_type == "pixel"
+
+
 def test_missing_vndks_merge_without_replacing_stock(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     system = tmp_path / "system"
