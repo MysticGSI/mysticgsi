@@ -30,10 +30,8 @@
           # External commands the pipeline invokes by name.
           runtimeTools = with pkgs; [
             aria2            # URL builds (cli.py fetch)
-            e2fsprogs
-            erofs-utils      # fsck.erofs for EROFS partitions
-            android-tools    # mke2fs.android, e2fsdroid
-            apktool          # framework jar patches
+            curl
+            jdk17_headless   # run the bundled Apktool JAR
             gnupatch
             libarchive       # bsdtar, for RAR firmware packages
             openssl          # AVB image signing
@@ -46,10 +44,6 @@
             shellHook = ''
               export PYTHONPATH="$PWD''${PYTHONPATH:+:$PYTHONPATH}"
               export PYTHONDONTWRITEBYTECODE=1
-
-              # tools/host/env.py prefers these over PATH.
-              export MKE2FS=${pkgs.android-tools}/bin/mke2fs.android
-              export E2FSDROID=${pkgs.android-tools}/bin/e2fsdroid
               echo "mysticgsi dev shell -- $(python3 --version)"
               echo "  run the tests:  python3 -m pytest tests -q"
             '';

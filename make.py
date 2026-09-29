@@ -13,6 +13,13 @@ from assets import ensure_extracted
 from tools.config import DEFAULT_PARTITIONS
 from tools.isa import find_cpu_features
 
+APKTOOL_JAR = os.path.join(os.path.dirname(__file__), "tools", "apktool", "apktool.jar")
+
+
+def apktool(*args, cwd=None):
+    return fsops.run(["java", "-jar", APKTOOL_JAR, *args], cwd=cwd)
+
+
 SAFE_NAME = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 UNSAFE_CHARS = re.compile(r"[^A-Za-z0-9._-]")
 
@@ -848,15 +855,12 @@ class RomPorter:
 
         fsops.copy_file(miui_services_path, workdir)
         if (
-            fsops.run(
-                [
-                    "apktool",
-                    "d",
-                    os.path.join(workdir, "miui-services.jar"),
-                    "-f",
-                    "-o",
-                    out_dir,
-                ]
+            apktool(
+                "d",
+                os.path.join(workdir, "miui-services.jar"),
+                "-f",
+                "-o",
+                out_dir,
             )
             != 0
         ):
@@ -878,7 +882,7 @@ class RomPorter:
             file.write(content)
             file.truncate()
 
-        if fsops.run(["apktool", "b"], cwd=out_dir) != 0:
+        if apktool("b", cwd=out_dir) != 0:
             raise RuntimeError("apktool failed to rebuild miui-services.jar")
         built = f"{out_dir}/dist/miui-services.jar"
         if not os.path.exists(built):
@@ -895,15 +899,12 @@ class RomPorter:
         out_dir = os.path.join(workdir, "services.jar.out")
         fsops.copy_file(services_path, workdir)
         if (
-            fsops.run(
-                [
-                    "apktool",
-                    "d",
-                    os.path.join(workdir, "services.jar"),
-                    "-f",
-                    "-o",
-                    out_dir,
-                ]
+            apktool(
+                "d",
+                os.path.join(workdir, "services.jar"),
+                "-f",
+                "-o",
+                out_dir,
             )
             != 0
         ):
@@ -962,7 +963,7 @@ class RomPorter:
 
         if not patched:
             self.log("services.jar patching failed; keeping the stock jar")
-        elif fsops.run(["apktool", "b"], cwd=out_dir) != 0:
+        elif apktool("b", cwd=out_dir) != 0:
             self.log(
                 "apktool failed to rebuild services.jar; keeping the stock jar"
             )
@@ -1976,9 +1977,7 @@ class RomPorter:
         # -o because apktool 2 and 3 put the default output in different
         # places; --no-debug-info because apktool 3 dropped its -b form.
         if (
-            fsops.run(
-                ["apktool", "d", "-f", "--no-debug-info", "-o", out_dir, path]
-            )
+            apktool("d", "-f", "--no-debug-info", "-o", out_dir, path)
             != 0
         ):
             raise RuntimeError(f"apktool failed to decode {framework}")
@@ -2001,10 +2000,7 @@ class RomPorter:
         ) as staging:
             rebuilt = os.path.join(staging, os.path.basename(path))
             if (
-                fsops.run(
-                    ["apktool", "b", "-o", os.path.abspath(rebuilt)],
-                    cwd=out_dir,
-                )
+                apktool("b", "-o", os.path.abspath(rebuilt), cwd=out_dir)
                 != 0
             ):
                 raise RuntimeError(f"apktool failed to rebuild {framework}")

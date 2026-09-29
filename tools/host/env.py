@@ -4,6 +4,7 @@ Host tool discovery for the native binaries the build still needs.
 
 from typing import Optional
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -17,6 +18,12 @@ TOOL_ALIASES = {
 }
 
 REQUIRED_TOOLS = ("mke2fs", "e2fsdroid", "openssl")
+
+
+def _platform_bin():
+    return os.path.join(
+        REPO_ROOT, "tools", "bin", platform.system(), platform.machine()
+    )
 
 
 def _brew_paths():
@@ -36,9 +43,8 @@ def _brew_paths():
 
 
 def configure_environment() -> None:
-    """Prepends the locally built and Homebrew tools to PATH."""
-    # Built by tools/build_android_tools.py.
-    paths = [os.path.join(REPO_ROOT, "tools", "bin")]
+    """Prepends bundled, locally built and Homebrew tools to PATH."""
+    paths = [_platform_bin(), os.path.join(REPO_ROOT, "tools", "bin")]
     if sys.platform == "darwin":
         paths.extend(_brew_paths())
 
