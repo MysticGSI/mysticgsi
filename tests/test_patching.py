@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import fsops
-from make import RomPorter, SettingsProp
+from make import APKTOOL_JAR, RomPorter, SettingsProp
 
 
 def test_rom_detection_uses_honor_partition_and_respects_precedence(tmp_path):
@@ -147,9 +147,12 @@ def test_framework_failure_preserves_stock(tmp_path, monkeypatch, failure):
     stages = []
 
     def run(argv, *, cwd=None, stdin=None):
-        stage = (
-            "patch" if argv[0] == "patch" else ("decode" if argv[1] == "d" else "build")
-        )
+        if argv[0] == "patch":
+            stage = "patch"
+        else:
+            assert argv[:3] == ["java", "-jar", APKTOOL_JAR]
+            assert argv[3] in ("d", "b")
+            stage = "decode" if argv[3] == "d" else "build"
         stages.append(stage)
         if stage == "build":
             Path(argv[argv.index("-o") + 1]).write_bytes(
@@ -175,7 +178,11 @@ def test_framework_success_replaces_stock_atomically(tmp_path, monkeypatch):
     porter = RomPorter("test")
 
     def run(argv, *, cwd=None, stdin=None):
-        if argv[0] == "apktool" and argv[1] == "b":
+        if argv[0] == "patch":
+            return 0
+        assert argv[:3] == ["java", "-jar", APKTOOL_JAR]
+        assert argv[3] in ("d", "b")
+        if argv[3] == "b":
             assert framework.read_bytes() == b"stock framework"
             Path(argv[argv.index("-o") + 1]).write_bytes(b"patched framework")
         return 0
