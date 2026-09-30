@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
+import os
 import platform
 import shutil
 import subprocess
@@ -43,6 +44,15 @@ PACMAN_PACKAGES = [
 ]
 
 
+def as_root(cmd):
+    if os.getuid() != 0:
+        root_command = shutil.which("sudo") or shutil.which("doas")
+        if not root_command:
+            raise RuntimeError("sudo or doas is required to install packages")
+        cmd = [root_command, *cmd]
+    subprocess.run(cmd, check=True)
+
+
 def setup_macos(dev):
     if not shutil.which("brew"):
         raise RuntimeError("install Homebrew first: https://brew.sh")
@@ -57,32 +67,21 @@ def setup_macos(dev):
 
 
 def setup_debian(dev):
-    if not shutil.which("sudo"):
-        raise RuntimeError("sudo is required to install Debian/Ubuntu packages")
-
     print("Installing apt packages")
-    subprocess.run(["sudo", "apt-get", "update"], check=True)
-    subprocess.run(["sudo", "apt-get", "install", "-y", *APT_PACKAGES], check=True)
+    as_root(["apt-get", "update"])
+    as_root(["apt-get", "install", "-y", *APT_PACKAGES])
     if not shutil.which("java"):
         print("Java not found. Installing default-jre-headless")
-        subprocess.run(
-            ["sudo", "apt-get", "install", "-y", "default-jre-headless"], check=True
-        )
+        as_root(["apt-get", "install", "-y", "default-jre-headless"])
     make_venv("python3", dev)
 
 
 def setup_arch(dev):
-    if not shutil.which("sudo"):
-        raise RuntimeError("sudo is required to install Arch packages")
-
     print("Installing pacman packages")
-    subprocess.run(["sudo", "pacman", "-Syu", "--needed", *PACMAN_PACKAGES], check=True)
+    as_root(["pacman", "-Syu", "--needed", *PACMAN_PACKAGES])
     if not shutil.which("java"):
         print("Java not found. Installing jre17-openjdk-headless")
-        subprocess.run(
-            ["sudo", "pacman", "-S", "--needed", "jre17-openjdk-headless"],
-            check=True,
-        )
+        as_root(["pacman", "-S", "--needed", "jre17-openjdk-headless"])
     make_venv("python", dev)
 
 
