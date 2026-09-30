@@ -39,6 +39,7 @@ def _brew_paths():
         f"{prefix}/opt/e2fsprogs/bin",
         f"{prefix}/opt/gpatch/libexec/gnubin",
         f"{prefix}/opt/openssl@3/bin",
+        f"{prefix}/opt/openjdk@17/bin",
     ]
 
 
@@ -49,9 +50,9 @@ def configure_environment() -> None:
         paths.extend(_brew_paths())
 
     current = os.environ.get("PATH", "").split(os.pathsep)
-    new = [p for p in paths if os.path.isdir(p) and p not in current]
+    new = [p for p in paths if os.path.isdir(p)]
     if new:
-        os.environ["PATH"] = os.pathsep.join(new + current)
+        os.environ["PATH"] = os.pathsep.join(new + [p for p in current if p not in new])
 
 
 def find_tool(tool_name: str) -> Optional[str]:

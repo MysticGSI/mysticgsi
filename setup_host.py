@@ -17,6 +17,7 @@ BREW_PACKAGES = [
     "aria2",
     "gpatch",
     "openssl@3",
+    "openjdk@17",
 ]
 
 APT_PACKAGES = [
@@ -48,9 +49,6 @@ def setup_macos(dev):
 
     print("Installing Homebrew packages")
     subprocess.run(["brew", "install", *BREW_PACKAGES], check=True)
-    if not shutil.which("java"):
-        print("Java not found. Installing openjdk@17")
-        subprocess.run(["brew", "install", "openjdk@17"], check=True)
 
     prefix = subprocess.run(
         ["brew", "--prefix", "python@3.13"], capture_output=True, text=True, check=True
