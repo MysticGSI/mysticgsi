@@ -80,8 +80,12 @@ class RomPorter:
     def __init__(self, rom_name, variant_tag=""):
         self.images_dir = ""
         self.logger = StubLogger()
-        self.image_files = {}
-        self.partition_dirs: dict[str, str] = {}
+        self.patch_context = PatchContext(
+            partition_dirs={},
+            image_files={},
+            log=self.log,
+            patches_dir=patches_dir,
+        )
         # Partition -> {path in its image: SELinux label}.
         self.stock_labels: dict[str, dict[str, str]] = {}
         self.rom_name = safe_name(rom_name, "rom_name")
@@ -93,15 +97,31 @@ class RomPorter:
         self.debloat = True
         self.avb_key = None
         self.work_dir = f"{tmp_dir}/{rom_name}"
-        self.props: dict[str, SettingsProp] = {}
         self.cpu_warning = ""
-        self.patch_context = PatchContext(
-            partition_dirs=self.partition_dirs,
-            image_files=self.image_files,
-            log=self.log,
-            props=self.props,
-            patches_dir=patches_dir,
-        )
+
+    @property
+    def partition_dirs(self) -> dict[str, str]:
+        return self.patch_context.partition_dirs
+
+    @partition_dirs.setter
+    def partition_dirs(self, value: dict[str, str]):
+        self.patch_context.partition_dirs = value
+
+    @property
+    def image_files(self) -> dict[str, str]:
+        return self.patch_context.image_files
+
+    @image_files.setter
+    def image_files(self, value: dict[str, str]):
+        self.patch_context.image_files = value
+
+    @property
+    def props(self) -> dict[str, SettingsProp]:
+        return self.patch_context.props
+
+    @props.setter
+    def props(self, value: dict[str, SettingsProp]):
+        self.patch_context.props = value
 
     def log(self, message):
         self.logger.add(message)
@@ -454,8 +474,7 @@ class RomPorter:
                 "run a full build first"
             )
             return None
-        self.partition_dirs.clear()
-        self.partition_dirs["system"] = system_dir
+        self.partition_dirs = {"system": system_dir}
 
         self.logger.set_progress(90)
         self.logger.set_state("mke2fs")
