@@ -4052,7 +4052,7 @@ class Avb(object):
           dynamic_partition_size: Calculate partition size based on image size.
           partition_name: Name of partition (without A/B suffix).
           hash_algorithm: Hash algorithm to use.
-          salt: Salt to use as a hexadecimal string or None to use /dev/urandom.
+          salt: Salt to use as a hexadecimal string or None for random bytes.
           chain_partitions_use_ab: List of partitions to chain with A/B or None.
           chain_partitions_do_not_use_ab: List of partitions to chain without A/B or None.
           algorithm_name: Name of algorithm to use.
@@ -4176,8 +4176,7 @@ class Avb(object):
                 # size as the hash size. Don't populate a random salt if this
                 # descriptor is being created to use a persistent digest on device.
                 hash_size = digest_size
-                with open("/dev/urandom", "rb") as f:
-                    salt = f.read(hash_size)
+                salt = os.urandom(hash_size)
             else:
                 salt = b""
 
@@ -4326,7 +4325,7 @@ class Avb(object):
           fec_num_roots: Number of roots for FEC.
           hash_algorithm: Hash algorithm to use.
           block_size: Block size to use.
-          salt: Salt to use as a hexadecimal string or None to use /dev/urandom.
+          salt: Salt to use as a hexadecimal string or None for random bytes.
           chain_partitions_use_ab: List of partitions to chain.
           chain_partitions_do_not_use_ab: List of partitions to chain without A/B or None.
           algorithm_name: Name of algorithm to use.
@@ -4472,8 +4471,7 @@ class Avb(object):
                 # size as the hash size. Don't populate a random salt if this
                 # descriptor is being created to use a persistent digest on device.
                 hash_size = digest_size
-                with open("/dev/urandom", "rb") as f:
-                    salt = f.read(hash_size)
+                salt = os.urandom(hash_size)
             else:
                 salt = b""
 
@@ -5248,7 +5246,7 @@ class AvbTool(object):
             help="Hash algorithm to use (default: sha256)",
             default="sha256",
         )
-        sub_parser.add_argument("--salt", help="Salt in hex (default: /dev/urandom)")
+        sub_parser.add_argument("--salt", help="Salt in hex (default: random bytes)")
         sub_parser.add_argument(
             "--calc_max_image_size",
             help=(
@@ -5309,7 +5307,7 @@ class AvbTool(object):
         sub_parser.add_argument(
             "--hash_algorithm", help="Hash algorithm to use (default: sha1)", default=""
         )
-        sub_parser.add_argument("--salt", help="Salt in hex (default: /dev/urandom)")
+        sub_parser.add_argument("--salt", help="Salt in hex (default: random bytes)")
         sub_parser.add_argument(
             "--block_size",
             help="Block size (default: 4096)",
