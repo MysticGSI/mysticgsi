@@ -19,6 +19,7 @@ out
 !/README.md
 !/CONTRIBUTING.md
 !/CODE_OF_CONDUCT.md
+!/docs/porting.md
 
 # Python and editors
 *.pyc
