@@ -10,7 +10,6 @@ VENDORS = {
     "emui": huawei,
     "magicos": huawei,
     "harmonyos": huawei,
-    "hos": huawei,
     "zui": lenovo,
     "nothing": nothing,
     "realmeui": oplus,

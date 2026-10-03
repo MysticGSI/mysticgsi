@@ -26,9 +26,6 @@ def get_display_name(ctx):
 
 
 def patch(ctx):
-    # The legacy "hos" type only supplied display naming.
-    if ctx.rom_type == "hos":
-        return
     system_dir = ctx.partition_dirs["system"]
     system = ctx.system_root()
     system_prop = ctx.partition_prop("system")
