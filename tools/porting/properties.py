@@ -1,9 +1,9 @@
 class SettingsProp:
-    def __init__(self):
+    def __init__(self) -> None:
         self.values: dict[str, str] = {}
         self.path: str = ""
 
-    def init_from_file(self, path):
+    def init_from_file(self, path: str) -> None:
         self.path = path.replace("//", "/")
 
         with open(self.path, "r") as f:
@@ -16,10 +16,10 @@ class SettingsProp:
                 if sep:
                     self.values[key] = value
 
-    def get_value(self, key) -> str | None:
+    def get_value(self, key: str) -> str | None:
         return self.values.get(key)
 
-    def first_of(self, *keys) -> str | None:
+    def first_of(self, *keys: str) -> str | None:
         """Like `get_value(a) or get_value(b) or ...`."""
         for key in keys:
             value = self.values.get(key)
@@ -27,7 +27,7 @@ class SettingsProp:
                 return value
         return None
 
-    def starts_with(self, key):
+    def starts_with(self, key: str) -> dict[str, str]:
         dictionary = {}
         for i in self.values:
             if i.startswith(key):
@@ -35,7 +35,7 @@ class SettingsProp:
 
         return dictionary
 
-    def exists(self, key):
+    def exists(self, key: str) -> bool:
         return key in self.values
 
     def exists_any(self, keys: list[str]) -> list[str]:
@@ -47,7 +47,7 @@ class SettingsProp:
     def is_false(self, key: str) -> bool:
         return not self.is_true(key)
 
-    def get_device_brand(self):
+    def get_device_brand(self) -> str | None:
         return self.first_of(
             "ro.product.odm.brand",
             "ro.product.brand",
@@ -56,19 +56,19 @@ class SettingsProp:
             "ro.product.product.brand",
         )
 
-    def get_build_id(self):
+    def get_build_id(self) -> str | None:
         return self.first_of(
             "ro.system.build.id", "ro.product.build.id", "ro.build.id"
         )
 
-    def get_display_build_id(self):
+    def get_display_build_id(self) -> str:
         return str(
             self.first_of(
                 "ro.build.display.id", "ro.system.build.id", "ro.build.id"
             )
         )
 
-    def get_sdk_version(self):
+    def get_sdk_version(self) -> int:
         raw = self.first_of(
             "ro.system.build.version.sdk", "ro.product.build.version.sdk"
         )
@@ -79,7 +79,7 @@ class SettingsProp:
             )
         return int(raw)
 
-    def get_device_model(self):
+    def get_device_model(self) -> str | None:
         return self.first_of(
             "ro.product.product.tran.device.name.default",
             "ro.product.en.display",
@@ -91,7 +91,7 @@ class SettingsProp:
             "ro.product.product.model",
         )
 
-    def get_device(self):
+    def get_device(self) -> str | None:
         return self.first_of(
             "ro.product.odm.device",
             "ro.product.device",
@@ -100,7 +100,7 @@ class SettingsProp:
             "ro.product.product.device",
         )
 
-    def get_device_name(self):
+    def get_device_name(self) -> str | None:
         return self.first_of(
             "ro.product.odm.name",
             "ro.product.name",
@@ -109,7 +109,7 @@ class SettingsProp:
             "ro.product.system.name",
         )
 
-    def get_device_manufacturer(self):
+    def get_device_manufacturer(self) -> str | None:
         return self.first_of(
             "ro.product.odm.manufacturer",
             "ro.product.manufacturer",
@@ -135,14 +135,14 @@ class SettingsProp:
             )
         return raw
 
-    def get_market_name(self):
+    def get_market_name(self) -> str | None:
         return self.first_of(
             "ro.config.marketing_name",
             "ro.product.odm.marketname",
             "ro.vendor.oplus.market.name",
         )
 
-    def get_build_fingerprint(self):
+    def get_build_fingerprint(self) -> str | None:
         return self.first_of(
             "ro.odm.build.fingerprint",
             "ro.build.fingerprint",
@@ -150,19 +150,19 @@ class SettingsProp:
             "ro.system.build.fingerprint",
         )
 
-    def get_build_flavor(self):
+    def get_build_flavor(self) -> str | None:
         return self.values.get("ro.build.flavor")
 
-    def get_security_patch(self):
+    def get_security_patch(self) -> str | None:
         return self.first_of(
             "ro.huawei.build.version.security_patch",
             "ro.build.version.security_patch",
         )
 
-    def get_build_tags(self):
+    def get_build_tags(self) -> str | None:
         return self.first_of("ro.odm.build.tags", "ro.build.tags")
 
-    def get_build_incremental(self):
+    def get_build_incremental(self) -> str | None:
         return self.first_of(
             "ro.build.version.incremental",
             "ro.system.build.version.incremental",

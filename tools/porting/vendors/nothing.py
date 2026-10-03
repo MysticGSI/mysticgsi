@@ -2,15 +2,16 @@ import os
 
 import fsops
 
+from ..context import PatchContext
 from ..framework import edit_framework
 
 
-def get_display_name(ctx):
+def get_display_name(ctx: PatchContext) -> str:
     version = ctx.partition_prop("system").get_value("ro.nothing.version.id")
     return f"NothingOS [{version}]"
 
 
-def copy_vendor_files(ctx):
+def copy_vendor_files(ctx: PatchContext) -> None:
     fsops.cp_r(
         os.path.join(
             ctx.partition_dirs["vendor"],
@@ -20,14 +21,14 @@ def copy_vendor_files(ctx):
     )
 
 
-def patch_frameworks(ctx):
+def patch_frameworks(ctx: PatchContext) -> None:
     if not ctx.is_android_version(13):
         return
     path = os.path.join(ctx.system_root(), "framework", "services.jar")
     edit_framework(path, _edit_services)
 
 
-def _edit_services(out_dir):
+def _edit_services(out_dir: str) -> bool:
     patched = False
     # ChargeLevelUpdater depends on Nothing's HALs and can bootloop.
     charge_updater = os.path.join(

@@ -1,4 +1,7 @@
-def get_display_name(ctx):
+from ..context import PatchContext
+
+
+def get_display_name(ctx: PatchContext) -> str:
     system_prop = ctx.partition_prop("system")
     oneui_version = system_prop.get_value("ro.build.version.oneui")
     if oneui_version and len(oneui_version) == 5:

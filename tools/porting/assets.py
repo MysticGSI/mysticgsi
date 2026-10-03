@@ -7,10 +7,11 @@ from assets import ensure_extracted, is_packed
 
 from . import vendors
 from .binary import patch_init
+from .context import PatchContext
 from .framework import apply_framework_patches
 
 
-def apply_generic_patches(ctx):
+def apply_generic_patches(ctx: PatchContext) -> None:
     system_prop = ctx.partition_prop("system")
     android_version = str(system_prop.get_android_version())
     patch_version = android_version.split(".", 1)[0]
@@ -47,7 +48,7 @@ def apply_generic_patches(ctx):
         )
 
 
-def copy_missing_vndks(ctx):
+def copy_missing_vndks(ctx: PatchContext) -> None:
     system_ext = ctx.partition_dirs.get("system_ext")
     system = ctx.system_root()
     android_sdk = str(ctx.partition_prop("system").get_sdk_version())
@@ -73,7 +74,7 @@ def copy_missing_vndks(ctx):
         )
 
 
-def apply_rom_patches(ctx):
+def apply_rom_patches(ctx: PatchContext) -> None:
     vendors.detect_rom_type(ctx)
 
     system_prop = ctx.partition_prop("system")

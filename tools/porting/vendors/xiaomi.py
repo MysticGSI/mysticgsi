@@ -2,10 +2,11 @@ import os
 
 import fsops
 
+from ..context import PatchContext
 from ..framework import edit_framework
 
 
-def get_display_name(ctx):
+def get_display_name(ctx: PatchContext) -> str | None:
     system_prop = ctx.partition_prop("system")
     if ctx.rom_type == "miui":
         return f"MIUI [{system_prop.get_build_incremental()}]"
@@ -14,7 +15,7 @@ def get_display_name(ctx):
     return None
 
 
-def patch(ctx):
+def patch(ctx: PatchContext) -> None:
     system_dir = ctx.partition_dirs["system"]
     mi_ext = ctx.partition_dirs.get("mi_ext")
     product = ctx.partition_dirs["product"]
@@ -57,7 +58,7 @@ def patch(ctx):
             )
 
 
-def patch_frameworks(ctx):
+def patch_frameworks(ctx: PatchContext) -> None:
     if ctx.rom_type not in ("miui", "hyperos"):
         return
     if not ctx.is_android_version(14):
@@ -68,7 +69,7 @@ def patch_frameworks(ctx):
     edit_framework(path, _edit_services)
 
 
-def _edit_services(out_dir):
+def _edit_services(out_dir: str) -> bool:
     # Fix brightness in Xiaomi 14 ports (HyperOS 1.0 only).
     hysteric_path = os.path.join(
         out_dir,

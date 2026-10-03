@@ -1,7 +1,11 @@
 import os
 
+from .context import PatchContext
 
-def hexpatch(ctx, filepath: str, original: str, patched: str):
+
+def hexpatch(
+    ctx: PatchContext, filepath: str, original: str, patched: str
+) -> None:
     if not os.path.exists(filepath):
         ctx.log(f"hexpatch: {filepath} not found")
         return
@@ -15,7 +19,7 @@ def hexpatch(ctx, filepath: str, original: str, patched: str):
         file.truncate()
 
 
-def patch_init(ctx):
+def patch_init(ctx: PatchContext) -> None:
     system = ctx.system_root()
 
     # security_setenforce(1) -> security_setenforce(0): permissive SELinux

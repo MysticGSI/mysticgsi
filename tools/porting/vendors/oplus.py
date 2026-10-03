@@ -3,9 +3,10 @@ import os
 import fsops
 
 from ..binary import hexpatch
+from ..context import PatchContext
 
 
-def get_display_name(ctx):
+def get_display_name(ctx: PatchContext) -> str | None:
     version = ctx.partition_prop("system").get_value(
         "ro.build.version.oplusrom"
     )
@@ -20,7 +21,7 @@ def get_display_name(ctx):
     return f"{names[ctx.rom_type]} [{version}]"
 
 
-def patch_binder_monitor(ctx):
+def patch_binder_monitor(ctx: PatchContext) -> None:
     system_ext = ctx.partition_dirs.get("system_ext")
     if not system_ext:
         ctx.log("Skipping oplus binder monitor patch: no system_ext")
@@ -34,7 +35,7 @@ def patch_binder_monitor(ctx):
     hexpatch(ctx, path, "D40000B500088052", "D40000B500078052")
 
 
-def patch(ctx):
+def patch(ctx: PatchContext) -> None:
     system_dir = ctx.partition_dirs["system"]
     my_product = ctx.partition_dirs.get("my_product")
     odm = ctx.partition_dirs.get("odm")

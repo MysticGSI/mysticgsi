@@ -1,11 +1,13 @@
 import os
+from collections.abc import Iterable
 
 import fsops
 
 from . import assets, vendors
+from .context import PatchContext
 
 
-def run(ctx):
+def run(ctx: PatchContext) -> None:
     ctx.log(f"Patching Android {ctx.info.android_version} firmware")
 
     determine_treble_compatibility(ctx)
@@ -69,7 +71,7 @@ USB_DEBUGGING_PROPS = [
 PAIRED_32BIT_PROGRAMS = ("linker", "linker_asan")
 
 
-def find_32bit_only_programs(bin_dirs):
+def find_32bit_only_programs(bin_dirs: Iterable[str]) -> list[str]:
     """Programs in bin_dirs that exist only as 32-bit ELF executables."""
     found = set()
     for bin_dir in bin_dirs:
@@ -94,7 +96,7 @@ def find_32bit_only_programs(bin_dirs):
     return sorted(found)
 
 
-def remove_unneeded_files(ctx):
+def remove_unneeded_files(ctx: PatchContext) -> None:
     system = ctx.system_root()
     system_ext = ctx.partition_dirs.get("system_ext")
 
@@ -126,7 +128,7 @@ def remove_unneeded_files(ctx):
         fsops.rmrf(os.path.join(system_ext, qcom_location_app))
 
 
-def patch_ramdisk(ctx):
+def patch_ramdisk(ctx: PatchContext) -> None:
     sysdir = ctx.partition_dirs["system"]
 
     to_remove = ["persist", "bt_firmware", "firmware", "cache"]
@@ -142,7 +144,7 @@ def patch_ramdisk(ctx):
         fsops.symlink(i, os.path.join(sysdir, value))
 
 
-def patch_selinux(ctx):
+def patch_selinux(ctx: PatchContext) -> None:
     clean = [
         "ro.opengles.version",
         "sys.usb.configfs",
@@ -206,7 +208,7 @@ def patch_selinux(ctx):
     )
 
 
-def add_64bit_props(ctx):
+def add_64bit_props(ctx: PatchContext) -> None:
     system = ctx.system_root()
     build_prop_path = os.path.join(system, "build.prop")
 
@@ -218,7 +220,7 @@ def add_64bit_props(ctx):
     fsops.append_text(build_prop_path, "ro.product.cpu.abilist64=arm64-v8a")
 
 
-def clean_build_props(ctx):
+def clean_build_props(ctx: PatchContext) -> None:
     system_prop_path = ctx.partition_prop("system").path
     product_prop_path = ctx.partition_prop("product").path
     system_ext_prop = ctx.partition_prop("system_ext")
@@ -253,7 +255,7 @@ def clean_build_props(ctx):
         fsops.drop_lines(system_ext_prop.path, "media.settings.xml")
 
 
-def detect_64bit_only(ctx):
+def detect_64bit_only(ctx: PatchContext) -> None:
     system = ctx.system_root()
 
     if not os.path.exists(os.path.join(system, "lib", "libandroid.so")):
@@ -275,7 +277,7 @@ def detect_64bit_only(ctx):
         )
 
 
-def put_mystic_build_display_id(ctx):
+def put_mystic_build_display_id(ctx: PatchContext) -> None:
     system_prop = ctx.partition_prop("system")
     product_prop = ctx.partition_prop("product")
 
@@ -293,7 +295,7 @@ def put_mystic_build_display_id(ctx):
             fsops.set_props(prop.path, keys[0], "Ported.Using.MysticGSI.Tool")
 
 
-def nuke_ab_files(ctx):
+def nuke_ab_files(ctx: PatchContext) -> None:
     system = ctx.system_root()
 
     ab_files = list(AB_FILES)
@@ -307,7 +309,7 @@ def nuke_ab_files(ctx):
         fsops.rmrf(os.path.join(system, i))
 
 
-def configure_updatable_apexes(ctx):
+def configure_updatable_apexes(ctx: PatchContext) -> None:
     system = ctx.system_root()
     system_prop_path = ctx.partition_prop("system").path
 
@@ -321,7 +323,7 @@ def configure_updatable_apexes(ctx):
         fsops.append_text(system_prop_path, "\nro.apex.updatable=true")
 
 
-def strip_reboot_on_failure(ctx):
+def strip_reboot_on_failure(ctx: PatchContext) -> None:
     system = ctx.system_root()
 
     paths = [
@@ -333,7 +335,7 @@ def strip_reboot_on_failure(ctx):
         fsops.drop_lines(path, "reboot_on_failure")
 
 
-def drop_selinux_mappings(ctx):
+def drop_selinux_mappings(ctx: PatchContext) -> None:
     product = ctx.partition_dirs["product"]
     system_ext = ctx.partition_dirs.get("system_ext")
     selinux_mapping_path = "etc/selinux/mapping/*"
@@ -343,7 +345,7 @@ def drop_selinux_mappings(ctx):
         fsops.rmrf(os.path.join(system_ext, selinux_mapping_path))
 
 
-def force_enable_usb_debugging(ctx):
+def force_enable_usb_debugging(ctx: PatchContext) -> None:
     system = ctx.system_root()
     prop_files = [ctx.partition_prop("system").path]
     prop_default = os.path.join(system, "etc/prop.default")
@@ -355,7 +357,7 @@ def force_enable_usb_debugging(ctx):
             fsops.sub_lines(path, pattern, repl)
 
 
-def determine_treble_compatibility(ctx):
+def determine_treble_compatibility(ctx: PatchContext) -> None:
     system = ctx.system_root()
     system_prop = ctx.partition_prop("system")
     if not system_prop.is_true("ro.treble.enabled"):

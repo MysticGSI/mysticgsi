@@ -1,7 +1,8 @@
+from ..context import PatchContext
 from ..properties import SettingsProp
 
 
-def get_display_name(ctx):
+def get_display_name(ctx: PatchContext) -> str | None:
     system_prop = ctx.partition_prop("system")
     product_prop = ctx.partition_prop("product") or SettingsProp()
 
@@ -22,7 +23,7 @@ def get_display_name(ctx):
         "ro.rising.version"
     ):
 
-        def rising(key):
+        def rising(key: str) -> str | None:
             return product_prop.get_value(key) or system_prop.get_value(key)
 
         return (

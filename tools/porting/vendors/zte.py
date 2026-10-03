@@ -2,8 +2,10 @@ import os
 
 import fsops
 
+from ..context import PatchContext
 
-def get_display_name(ctx):
+
+def get_display_name(ctx: PatchContext) -> str | None:
     names = {"myos": "MyOS", "nebulaos": "NebulaOS"}
     name = names.get(ctx.rom_type)
     if name is None:
@@ -13,7 +15,7 @@ def get_display_name(ctx):
     return f"{name} [{version}]"
 
 
-def patch(ctx):
+def patch(ctx: PatchContext) -> None:
     vendor_prop = ctx.part_prop("vendor")
     if not vendor_prop:
         return

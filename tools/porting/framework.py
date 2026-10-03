@@ -1,20 +1,27 @@
 import json
 import os
 import tempfile
+from collections.abc import Callable, Iterable
 
 import fsops
 
+from .context import PatchContext
 
 APKTOOL_JAR = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "apktool", "apktool.jar"
 )
 
 
-def apktool(*args, cwd=None):
+def apktool(*args: str, cwd: str | None = None) -> int:
     return fsops.run(["java", "-jar", APKTOOL_JAR, *args], cwd=cwd)
 
 
-def edit_framework(path, edit, *, no_debug_info=False):
+def edit_framework(
+    path: str,
+    edit: Callable[[str], bool],
+    *,
+    no_debug_info: bool = False,
+) -> None:
     path = os.path.abspath(path)
     framework = os.path.basename(path)
     with tempfile.TemporaryDirectory(
@@ -36,7 +43,9 @@ def edit_framework(path, edit, *, no_debug_info=False):
         os.replace(rebuilt, path)
 
 
-def apply_framework_patches(ctx, patches_json, rom_patches_dir):
+def apply_framework_patches(
+    ctx: PatchContext, patches_json: str, rom_patches_dir: str
+) -> None:
     with open(patches_json, "r") as f:
         patches_data = json.load(f)
     for partition, frameworks in patches_data.items():
@@ -46,8 +55,10 @@ def apply_framework_patches(ctx, patches_json, rom_patches_dir):
                 patch_framework(path, patch_names, rom_patches_dir)
 
 
-def patch_framework(path, patch_names, rom_patches_dir):
-    def edit(out_dir):
+def patch_framework(
+    path: str, patch_names: Iterable[str], rom_patches_dir: str
+) -> None:
+    def edit(out_dir: str) -> bool:
         for patch_name in patch_names:
             patch_file = os.path.join(
                 rom_patches_dir, "framework-patches", f"{patch_name}.patch"

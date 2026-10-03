@@ -1,12 +1,13 @@
 from . import vendors
+from .context import PatchContext
 from .vendors import custom
 
 
-def get_rom_name(ctx):
+def get_rom_name(ctx: PatchContext) -> str:
     return vendors.run_hook(ctx, "get_rom_name") or ctx.rom_type.capitalize()
 
 
-def get_display_name(ctx, variant_tag=""):
+def get_display_name(ctx: PatchContext, variant_tag: str = "") -> str:
     android_version = str(ctx.partition_prop("system").get_android_version())
     try:
         name = vendors.run_hook(ctx, "get_display_name")

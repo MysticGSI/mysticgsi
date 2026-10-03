@@ -30,12 +30,14 @@ import os
 
 import fsops
 
+from tools.porting.context import PatchContext
 
-def get_rom_name(ctx):
+
+def get_rom_name(ctx: PatchContext) -> str:
     return "ExampleOS"
 
 
-def patch(ctx):
+def patch(ctx: PatchContext) -> None:
     fsops.rmrf(os.path.join(ctx.system_root(), "etc/init/example-hal.rc"))
 ```
 

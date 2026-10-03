@@ -3,14 +3,16 @@ import re
 
 import fsops
 
+from ..context import PatchContext
 
-def get_rom_name(ctx):
+
+def get_rom_name(ctx: PatchContext) -> str | None:
     if ctx.rom_type == "alos":
         return "AluminiumOS"
     return None
 
 
-def patch(ctx):
+def patch(ctx: PatchContext) -> None:
     product = ctx.partition_dirs["product"]
     system_ext = ctx.partition_dirs.get("system_ext")
 
@@ -39,7 +41,7 @@ def patch(ctx):
         fsops.move(dark_bootanimation_path, bootanimation_path)
 
 
-def after_rom_patches(ctx):
+def after_rom_patches(ctx: PatchContext) -> None:
     if ctx.rom_type != "alos":
         return
 

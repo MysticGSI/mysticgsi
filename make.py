@@ -16,17 +16,16 @@ from tools.porting.context import PatchContext
 from tools.porting.pipeline import run as run_patches
 from tools.porting.properties import SettingsProp
 
-
 SAFE_NAME = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 UNSAFE_CHARS = re.compile(r"[^A-Za-z0-9._-]")
 
 
-def sanitize_name(value, fallback="unknown"):
+def sanitize_name(value: object, fallback: str = "unknown") -> str:
     value = UNSAFE_CHARS.sub("_", str(value)).strip("._-")
     return value[:96] or fallback
 
 
-def safe_name(value, what):
+def safe_name(value: object, what: str) -> str:
     value = str(value)
     if not SAFE_NAME.match(value) or value in (".", ".."):
         raise ValueError(
@@ -39,7 +38,7 @@ def safe_name(value, what):
 SIZE_UNITS = ["Bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
 
 
-def bytes_to_human(b: int):
+def bytes_to_human(b: int) -> str:
     d = ""
     s = 0
 
@@ -51,7 +50,7 @@ def bytes_to_human(b: int):
     return f"{b}{d} {SIZE_UNITS[s]}"
 
 
-def replace_image_size(text, system_size):
+def replace_image_size(text: str, system_size: int) -> str:
     """Updates the "Raw Image Size:" line of a build summary."""
     return re.sub(
         r"Raw Image Size: [^\n<]*",
@@ -66,18 +65,18 @@ output_dir = "out"
 
 
 class StubLogger:
-    def set_progress(self, progress: int): ...
+    def set_progress(self, progress: int) -> None: ...
 
-    def set_state(self, state: str): ...
+    def set_state(self, state: str) -> None: ...
 
-    def add(self, message):
+    def add(self, message: str) -> None:
         print(message)
 
 
 class RomPorter:
     PARTITION_NAMES: ClassVar[list[str]] = DEFAULT_PARTITIONS
 
-    def __init__(self, rom_name, variant_tag=""):
+    def __init__(self, rom_name: str, variant_tag: str = "") -> None:
         self.images_dir = ""
         self.logger = StubLogger()
         self.patch_context = PatchContext(
@@ -104,7 +103,7 @@ class RomPorter:
         return self.patch_context.partition_dirs
 
     @partition_dirs.setter
-    def partition_dirs(self, value: dict[str, str]):
+    def partition_dirs(self, value: dict[str, str]) -> None:
         self.patch_context.partition_dirs = value
 
     @property
@@ -112,7 +111,7 @@ class RomPorter:
         return self.patch_context.image_files
 
     @image_files.setter
-    def image_files(self, value: dict[str, str]):
+    def image_files(self, value: dict[str, str]) -> None:
         self.patch_context.image_files = value
 
     @property
@@ -120,13 +119,13 @@ class RomPorter:
         return self.patch_context.props
 
     @props.setter
-    def props(self, value: dict[str, SettingsProp]):
+    def props(self, value: dict[str, SettingsProp]) -> None:
         self.patch_context.props = value
 
-    def log(self, message):
+    def log(self, message: str) -> None:
         self.logger.add(message)
 
-    def build(self, filename):
+    def build(self, filename: str) -> int:
         if not os.path.exists(tmp_dir):
             os.mkdir(tmp_dir)
         if not os.path.exists(self.work_dir):
@@ -185,7 +184,7 @@ class RomPorter:
 
         return 0
 
-    def _unpack_image(self, name, path, out):
+    def _unpack_image(self, name: str, path: str, out: str) -> int:
         fs = tools.detect_filesystem(path)
         self.log(f"Unpacking {name} ({fs})")
         rc = tools.unpack_filesystem(path, out, fs_type=fs, logger=self.log)
@@ -196,7 +195,7 @@ class RomPorter:
             self.stock_labels[name] = labels
         return 0
 
-    def _unpack_partitions(self):
+    def _unpack_partitions(self) -> int:
         self.partition_dirs.clear()
         self.stock_labels.clear()
         if "system" not in self.image_files:
@@ -209,7 +208,7 @@ class RomPorter:
             self.partition_dirs[name] = out
         return 0
 
-    def _extract_firmware(self, archive_path):
+    def _extract_firmware(self, archive_path: str) -> int:
         self.images_dir = os.path.join(self.work_dir, "images")
         fsops.rmrf(f"{self.images_dir}")
         os.mkdir(self.images_dir)
@@ -238,15 +237,15 @@ class RomPorter:
 
         return 0
 
-    def get_rom_name(self):
+    def get_rom_name(self) -> str:
         self.patch_context.rom_type = self.rom_type
         return naming.get_rom_name(self.patch_context)
 
-    def get_display_name(self):
+    def get_display_name(self) -> str:
         self.patch_context.rom_type = self.rom_type
         return naming.get_display_name(self.patch_context, self.variant_tag)
 
-    def patch(self):
+    def patch(self) -> int:
         ctx = self.patch_context
         ctx.rom_type = self.rom_type
         ctx.override_rom_type = self.override_rom_type
@@ -270,10 +269,10 @@ class RomPorter:
             return -1
         return 0
 
-    def _get_system_root(self):
+    def _get_system_root(self) -> str:
         return self.patch_context.system_root()
 
-    def prepare(self):
+    def prepare(self) -> int:
         self.log("Merging dynamic partitions..")
         system_dir = self.partition_dirs["system"]
         # Partition -> where its root ended up in the system tree.
@@ -321,7 +320,7 @@ class RomPorter:
         self._save_stock_labels(placements)
         return 0
 
-    def _save_stock_labels(self, placements):
+    def _save_stock_labels(self, placements: dict[str, str]) -> None:
         """
         Writes the stock labels of everything merged into the system tree,
         keyed by final path, for the image stage (and later rebuilds).
@@ -337,7 +336,7 @@ class RomPorter:
         ) as f:
             json.dump(labels, f)
 
-    def _warn_cpu_features(self):
+    def _warn_cpu_features(self) -> None:
         self.cpu_warning = ""
         system = self._get_system_root()
         found = {}
@@ -374,7 +373,7 @@ class RomPorter:
             )
             self.log("Warning: " + self.cpu_warning)
 
-    def _write_image(self, output_name):
+    def _write_image(self, output_name: str) -> int | None:
         """
         Builds out/<rom_name>/<output_name>.img from the system tree, sized
         to fit its contents. Returns the signed image size, or None.
@@ -426,7 +425,7 @@ class RomPorter:
         self.output_path = f"{out_dir}/{output_name}"
         return system_size
 
-    def _create_system_image(self):
+    def _create_system_image(self) -> int:
         date = datetime.datetime.now().strftime("%Y%m%d")
         try:
             self.rom_type.capitalize()
@@ -460,7 +459,7 @@ class RomPorter:
 
         return 0
 
-    def rebuild(self, output_name):
+    def rebuild(self, output_name: str) -> int | None:
         """
         Rebuilds the image from the system tree a previous build left in
         tmp/<rom_name>/images/system, e.g. after debloating it by hand.
@@ -497,7 +496,7 @@ class RomPorter:
         return system_size
 
     @staticmethod
-    def _set_recorded_size(path, system_size):
+    def _set_recorded_size(path: str, system_size: int) -> None:
         try:
             with open(path) as f:
                 text = f.read()
@@ -506,7 +505,7 @@ class RomPorter:
         with open(path, "w") as f:
             f.write(replace_image_size(text, system_size))
 
-    def compress_output(self):
+    def compress_output(self) -> int:
         destination = f"{self.output_path}.zip"
         try:
             with tempfile.TemporaryDirectory(

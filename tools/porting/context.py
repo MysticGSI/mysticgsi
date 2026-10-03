@@ -1,11 +1,10 @@
 import os
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import fsops
 
 from .properties import SettingsProp
-
 
 SDK_MAP = {
     "10": "29",
@@ -33,13 +32,13 @@ CODENAME_MAP = {
 
 @dataclass
 class DeviceInfo:
-    device_brand: str = "unknown"
-    device_manufacturer: str = "unknown"
-    device_model: str = "unknown"
-    device_codename: str = "unknown"
+    device_brand: str | None = "unknown"
+    device_manufacturer: str | None = "unknown"
+    device_model: str | None = "unknown"
+    device_codename: str | None = "unknown"
     android_version: str = ""
     android_sdk: str = ""
-    build_fingerprint: str = ""
+    build_fingerprint: str | None = ""
     build_type: str = ""
     build_id: str = ""
     security_patch: str = ""
@@ -126,7 +125,9 @@ class PatchContext:
 
         return None
 
-    def reload_props(self, partition, path=None):
+    def reload_props(
+        self, partition: str, path: str | None = None
+    ) -> SettingsProp | None:
         if path is None:
             self.props.pop(partition, None)
             if partition in ("vendor", "odm"):
@@ -137,7 +138,7 @@ class PatchContext:
         self.props[partition] = reloaded
         return reloaded
 
-    def resolve_partitions(self):
+    def resolve_partitions(self) -> None:
         product = self._find_partition_dir("product")
         if not product:
             raise RuntimeError("product not found")
@@ -153,7 +154,7 @@ class PatchContext:
         if odm:
             self.partition_dirs["odm"] = odm
 
-    def capture_info(self):
+    def capture_info(self) -> None:
         self.part_prop("vendor")
         system_prop = self.partition_prop("system")
         product_prop = self.partition_prop("product")
@@ -192,7 +193,7 @@ class PatchContext:
             build_incremental=self._get_build_incremental(),
         )
 
-    def build_summary(self):
+    def build_summary(self) -> str:
         info = self.info
         architecture = "64-bit only" if self.is_64bit_only else "32/64-bit"
         return (
@@ -234,7 +235,11 @@ class PatchContext:
         return self.partition_prop("system").get_sdk_version() >= int(sdk)
 
     @staticmethod
-    def first_prop(props, getter, default):
+    def first_prop(
+        props: Iterable[SettingsProp | None],
+        getter: Callable[[SettingsProp], str | None],
+        default: str,
+    ) -> str:
         for prop in props:
             if prop:
                 val = getter(prop)

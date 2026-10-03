@@ -2,10 +2,11 @@ import os
 
 import fsops
 
+from ..context import PatchContext
 from ..properties import SettingsProp
 
 
-def get_display_name(ctx):
+def get_display_name(ctx: PatchContext) -> str | None:
     local_prop = ctx.props.get("h_product")
     if not local_prop:
         return None
@@ -25,7 +26,7 @@ def get_display_name(ctx):
     return f"{name} [{result}]"
 
 
-def patch(ctx):
+def patch(ctx: PatchContext) -> None:
     system_dir = ctx.partition_dirs["system"]
     system = ctx.system_root()
     system_prop = ctx.partition_prop("system")

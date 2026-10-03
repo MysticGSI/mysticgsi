@@ -1,10 +1,21 @@
 import os
+from types import ModuleType
+from typing import Literal
 
+from ..context import PatchContext
 from ..properties import SettingsProp
 from . import google, huawei, lenovo, nothing, oplus, samsung, xiaomi, zte
 
+HookName = Literal[
+    "copy_vendor_files",
+    "after_rom_patches",
+    "patch_frameworks",
+    "patch",
+    "get_rom_name",
+    "get_display_name",
+]
 
-VENDORS = {
+VENDORS: dict[str, ModuleType] = {
     "pixel": google,
     "alos": google,
     "emui": huawei,
@@ -25,7 +36,7 @@ VENDORS = {
 }
 
 
-def run_hook(ctx, name):
+def run_hook(ctx: PatchContext, name: HookName) -> str | None:
     vendor = VENDORS.get(ctx.rom_type)
     hook = getattr(vendor, name, None)
     if hook is not None:
@@ -33,7 +44,7 @@ def run_hook(ctx, name):
     return None
 
 
-def detect_rom_type(ctx):
+def detect_rom_type(ctx: PatchContext) -> None:
     if ctx.rom_type not in ("generic", "custom", "auto"):
         return
 
