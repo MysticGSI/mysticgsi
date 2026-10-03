@@ -31,11 +31,18 @@ def _brew_paths() -> list[str]:
 
 
 def configure_environment() -> None:
-    """Put bundled and Homebrew tools before the existing PATH."""
+    """Put bundled and platform tools before the existing PATH."""
     system = platform.system()
     paths = [os.path.join(BIN_ROOT, system, platform.machine()), BIN_ROOT]
     if system == "Darwin":
         paths.extend(_brew_paths())
+    elif system == "Windows":
+        paths.extend(
+            [
+                r"C:\Program Files\Git\usr\bin",
+                r"C:\Program Files\7-Zip",
+            ]
+        )
 
     current = os.environ.get("PATH", "").split(os.pathsep)
     paths = [p for p in paths if os.path.isdir(p)]

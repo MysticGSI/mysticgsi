@@ -334,7 +334,7 @@ class PatchContext:
         for path in candidates:
             if (
                 os.path.isdir(path)
-                and not os.path.islink(path)
+                and not fsops.islink(path)
                 and os.listdir(path)
             ):
                 return path

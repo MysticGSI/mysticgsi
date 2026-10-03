@@ -22,16 +22,33 @@ Partitions can be ext4, EROFS or F2FS.
 
 This project requires Python 3.10+.
 
-On macOS, install Homebrew and Xcode Command Line Tools first.
-
 ### Automatic setup
+
+#### macOS / Linux
+
+On macOS, install Homebrew and Xcode Command Line Tools first.
 
 ```sh
 git clone https://github.com/MysticGSI/mysticgsi.git && cd mysticgsi
-./setup_host.py     # add --dev to install Ruff
+./setup_host.py
 ```
 
-On macOS, Debian/Ubuntu and Arch, the script installs system packages and
+#### Windows
+
+Install Python 3 and Git if you haven't already. Make sure both are added to PATH.
+We recommend using WinGet:
+
+```cmd
+winget install --id Python.Python.3.14 --exact --source winget
+winget install --id Git.Git --exact --source winget
+```
+
+```cmd
+git clone https://github.com/MysticGSI/mysticgsi.git && cd mysticgsi
+python setup_host.py
+```
+
+On macOS, Debian/Ubuntu, Arch and Windows, the script installs system packages and
 creates `.venv`. On NixOS, it checks the development shell. Native image
 tools and the Apktool JAR are bundled with the repository.
 
@@ -88,6 +105,21 @@ python3 cli.py build <name> <firmware> --type <type>
 ```
 
 </details>
+
+<details>
+<summary>Windows</summary>
+
+```cmd
+winget install --id 7zip.7zip --exact --source winget
+winget install --id aria2.aria2 --exact --source winget
+winget install --id EclipseAdoptium.Temurin.26.JDK --exact --source winget
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+</details>
+
+
 
 ## Usage
 

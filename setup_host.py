@@ -43,6 +43,12 @@ PACMAN_PACKAGES = [
     "libarchive",
 ]
 
+WINGET_PACKAGES = [
+    "7zip.7zip",
+    "aria2.aria2",
+    "EclipseAdoptium.Temurin.26.JDK",
+]
+
 
 def as_root(cmd):
     if os.getuid() != 0:
@@ -106,6 +112,23 @@ def setup_nixos():
     print("Then run builds with: python3 cli.py build <name> <firmware>")
 
 
+def setup_windows(dev):
+    if not shutil.which("winget"):
+        raise RuntimeError("install App Installer first to get winget")
+
+    print("Installing winget packages")
+    for package in WINGET_PACKAGES:
+        result = subprocess.run(
+            [
+                "winget", "install", "--id", package,
+                "--exact", "--source", "winget",
+            ],
+        )
+        if (result.returncode & 0xFFFFFFFF) not in (0, 0x8A15002B):
+            result.check_returncode()
+    make_venv(sys.executable, dev)
+
+
 def check_distro():
     release = {}
     with open("/etc/os-release", encoding="utf-8") as source:
@@ -135,7 +158,9 @@ def make_venv(python, dev):
         raise RuntimeError("Python 3.10 or newer is required")
 
     venv = ROOT / ".venv"
-    venv_python = venv / "bin/python"
+    venv_python = venv / (
+        "Scripts/python.exe" if os.name == "nt" else "bin/python"
+    )
     requirements = ROOT / ("requirements-dev.txt" if dev else "requirements.txt")
 
     subprocess.run([str(python), "-m", "venv", str(venv)], check=True)
@@ -162,6 +187,8 @@ def main():
             setup_arch(dev)
         elif distro == "nixos":
             setup_nixos()
+    elif system == "Windows":
+        setup_windows(dev)
     else:
         raise RuntimeError(f"Unsupported OS: {system}")
 

@@ -4,6 +4,8 @@ import os
 import stat
 import struct
 
+from ..host import posix
+
 
 BLOCK_SIZE = 4096
 ADDRS_PER_BLOCK = 1018
@@ -493,7 +495,7 @@ def _extract_tree(fs, output_dir):
                 target = b"".join(fs.file_data(inode))
                 if b"\0" in target:
                     raise F2FSError("invalid symbolic link target")
-                os.symlink(os.fsdecode(target), path)
+                posix.symlink(os.fsdecode(target), path)
             else:
                 raise F2FSError(f"unsupported F2FS inode type: {path}")
     for path, mode in reversed(directory_modes):

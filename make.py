@@ -350,7 +350,7 @@ class RomPorter:
             "bin/surfaceflinger",
         ):
             path = os.path.join(system, relative_path)
-            if not os.path.lexists(path) or os.path.islink(path):
+            if not os.path.lexists(path) or fsops.islink(path):
                 continue
             features = find_cpu_features(path)
             if features is None:

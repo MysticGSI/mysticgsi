@@ -4,6 +4,8 @@ import re
 import shutil
 import subprocess
 
+from tools.host import posix
+
 CHUNK = 1024 * 1024
 BLOCK = 4096
 
@@ -34,7 +36,7 @@ def disk_usage(path):
     except OSError:
         return 0
     total = _allocated(st)
-    if not os.path.isdir(path) or os.path.islink(path):
+    if not os.path.isdir(path) or islink(path):
         return total
 
     seen = set()
@@ -129,7 +131,7 @@ def expand(pattern):
 def rmrf(path):
     for p in expand(path):
         try:
-            if os.path.isdir(p) and not os.path.islink(p):
+            if os.path.isdir(p) and not islink(p):
                 shutil.rmtree(p, ignore_errors=True)
             elif os.path.lexists(p):
                 os.remove(p)
@@ -150,7 +152,19 @@ def touch(path):
 def symlink(target, link):
     mkdirp(os.path.dirname(link))
     if not os.path.lexists(link):
-        os.symlink(target, link)
+        posix.symlink(os.fsdecode(target), os.path.abspath(os.fsdecode(link)))
+
+
+def readlink(path):
+    if os.path.islink(path):
+        return os.readlink(path)
+    if os.name == "nt" and os.path.isfile(path):
+        return posix.readlink(os.fsdecode(path))
+    return ""
+
+
+def islink(path):
+    return bool(readlink(path))
 
 
 def _target(src, dst):
@@ -171,9 +185,6 @@ def copy_file(src, dst):
 
 
 def cp_r(src, dst, *, clobber=True, exclude=None):
-    def ignore(directory, names):
-        return [name for name in names if exclude(name)]
-
     for s in expand(src):
         if exclude and exclude(os.path.basename(s)):
             continue
@@ -183,9 +194,9 @@ def cp_r(src, dst, *, clobber=True, exclude=None):
         if not clobber and os.path.lexists(target):
             if (
                 os.path.isdir(s)
-                and not os.path.islink(s)
+                and not islink(s)
                 and os.path.isdir(target)
-                and not os.path.islink(target)
+                and not islink(target)
             ):
                 for name in os.listdir(s):
                     cp_r(
@@ -193,16 +204,23 @@ def cp_r(src, dst, *, clobber=True, exclude=None):
                         clobber=False, exclude=exclude,
                     )
             continue
-        if os.path.islink(s):
+        if islink(s):
             if os.path.lexists(target):
                 rmrf(target)
             mkdirp(os.path.dirname(target))
-            os.symlink(os.readlink(s), target)
+            symlink(readlink(s), target)
         elif os.path.isdir(s):
-            shutil.copytree(
-                s, target, symlinks=True, dirs_exist_ok=clobber,
-                ignore=ignore if exclude else None,
-            )
+            if os.path.lexists(target) and (
+                islink(target) or not os.path.isdir(target)
+            ):
+                rmrf(target)
+            mkdirp(target)
+            for name in os.listdir(s):
+                cp_r(
+                    os.path.join(s, name), target,
+                    clobber=clobber, exclude=exclude,
+                )
+            shutil.copystat(s, target)
         else:
             mkdirp(os.path.dirname(target))
             if os.path.lexists(target):

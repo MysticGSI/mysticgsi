@@ -4,6 +4,7 @@ Extracts the tree of an ext2/3/4 image into a host directory.
 
 import os
 
+from ...host import posix
 from .filesystem import ROOT_INODE, Ext4Error, Ext4Filesystem
 
 _OPEN_FLAGS = (
@@ -37,13 +38,7 @@ def _write_file(fs, inode, path):
 
 def _write_symlink(fs, inode, path):
     target = os.fsdecode(fs.read_link(inode))
-    try:
-        os.symlink(target, path)
-    except OSError:
-        with open(
-            f"{path}.symlink", "w", encoding="utf-8", errors="surrogateescape"
-        ) as f:
-            f.write(target)
+    posix.symlink(target, path)
 
 
 def extract_ext4(image_path: str, output_dir: str, logger=None) -> bool:

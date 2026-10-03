@@ -82,7 +82,7 @@ def find_32bit_only_programs(bin_dirs: Iterable[str]) -> list[str]:
             if (
                 name.endswith("32")
                 or name in PAIRED_32BIT_PROGRAMS
-                or os.path.islink(path)
+                or fsops.islink(path)
                 or not os.path.isfile(path)
             ):
                 continue
