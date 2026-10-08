@@ -16,6 +16,66 @@ TOOL_ALIASES = {
 REQUIRED_TOOLS = ("mke2fs", "e2fsdroid", "openssl")
 
 
+def enable_case_sensitive(path: str) -> None:
+    """Allow Linux file names that differ only in case on Windows."""
+    if os.name != "nt":
+        return
+    from ctypes import WinDLL, WinError, byref, get_last_error, sizeof
+    from ctypes.wintypes import DWORD, HANDLE, LPCWSTR
+
+    kernel32 = WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateFileW.restype = HANDLE
+    path = os.path.abspath(path)
+
+    def check(result, operation):
+        if not result:
+            error = WinError(get_last_error())
+            if error.winerror == 5:
+                advice = (
+                    "Use an up-to-date Python and grant write attributes, "
+                    "create files/folders and delete children permissions "
+                    "on this directory."
+                )
+            else:
+                advice = (
+                    "Use a local NTFS directory on Windows 10/11, or "
+                    "build in WSL's Linux filesystem."
+                )
+            error.strerror = (
+                f"Cannot enable directory case sensitivity ({operation}): "
+                f"{error.strerror}. {advice}"
+            )
+            error.filename = path
+            raise error
+
+    # Read/write attributes, sharing read/write/delete, on a directory.
+    handle = kernel32.CreateFileW(
+        LPCWSTR(path), DWORD(0x180), DWORD(7), None,
+        DWORD(3), DWORD(0x02000000), None,
+    )
+    check(handle != HANDLE(-1).value, "CreateFileW")
+    handle = HANDLE(handle)
+    try:
+        flags = DWORD()
+        # FileCaseSensitiveInfo (23), FILE_CS_FLAG_CASE_SENSITIVE_DIR (1).
+        check(
+            kernel32.GetFileInformationByHandleEx(
+                handle, 23, byref(flags), sizeof(flags)
+            ),
+            "GetFileInformationByHandleEx",
+        )
+        if not flags.value & 1:
+            flags.value |= 1
+            check(
+                kernel32.SetFileInformationByHandle(
+                    handle, 23, byref(flags), sizeof(flags)
+                ),
+                "SetFileInformationByHandle",
+            )
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _brew_paths() -> list[str]:
     brew = shutil.which("brew")
     if not brew:

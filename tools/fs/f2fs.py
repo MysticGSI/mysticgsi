@@ -5,6 +5,7 @@ import stat
 import struct
 
 from ..host import posix
+from ..host.env import enable_case_sensitive
 
 
 BLOCK_SIZE = 4096
@@ -464,7 +465,13 @@ def _extract_tree(fs, output_dir):
     root = fs.inode(fs.root_ino)
     if not stat.S_ISDIR(_u16(root[0], 0)):
         raise F2FSError("root inode is not a directory")
-    os.makedirs(output_dir, exist_ok=True)
+    # Recent Python releases grant the Windows owner full control with 0o700.
+    os.makedirs(
+        output_dir,
+        mode=0o700 if os.name == "nt" else 0o777,
+        exist_ok=True,
+    )
+    enable_case_sensitive(output_dir)
     pending = [(root, output_dir)]
     directory_modes = []
     visited = {fs.root_ino}
@@ -482,6 +489,7 @@ def _extract_tree(fs, output_dir):
                     raise F2FSError("directory loop")
                 visited.add(nid)
                 os.mkdir(path)
+                enable_case_sensitive(path)
                 directory_modes.append((path, stat.S_IMODE(mode)))
                 pending.append((inode, path))
             elif stat.S_ISREG(mode):

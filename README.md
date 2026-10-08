@@ -130,6 +130,15 @@ python -m venv .venv
 .venv/bin/python cli.py clean
 ```
 
+On Windows, run from the repository root:
+
+```cmd
+.venv\Scripts\python.exe cli.py build test D:\path\to\firmware.tar
+```
+
+F2FS extraction on Windows needs a local NTFS working directory that allows
+case sensitivity. Use an up-to-date Python for Windows directory permissions.
+
 ### Commands
 
 ```sh
