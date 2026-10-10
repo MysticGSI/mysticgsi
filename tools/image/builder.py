@@ -124,6 +124,15 @@ def build_system_image(
     if mount_point == "/":
         clean_stub_directories(source_dir)
 
+    # Keep mke2fs's root-owned directory instead of copying host metadata.
+    lost_found = os.path.join(source_dir, "lost+found")
+    if (
+        os.path.isdir(lost_found)
+        and not fsops.islink(lost_found)
+        and not os.listdir(lost_found)
+    ):
+        os.rmdir(lost_found)
+
     work_dir = staging_dir or os.path.dirname(output_image) or "."
     if not file_contexts_path:
         stock_labels = None
