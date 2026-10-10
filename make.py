@@ -427,10 +427,7 @@ class RomPorter:
 
     def _create_system_image(self) -> int:
         date = datetime.datetime.now().strftime("%Y%m%d")
-        try:
-            self.rom_type.capitalize()
-        except Exception:
-            self.rom_type = "generic"
+
         output_name = sanitize_name(
             f"{self.get_rom_name()}-{self.device_codename}"
             f"-{self.android_version}-{self.build_incremental}"

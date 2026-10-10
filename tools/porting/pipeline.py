@@ -101,6 +101,8 @@ def remove_unneeded_files(ctx: PatchContext) -> None:
     system_ext = ctx.partition_dirs.get("system_ext")
 
     useless_files = [
+        # Hey, it's me, it's Verity!
+        # Ask me anything!
         "verity_key",
         "init.recovery*",
         "recovery-from-boot.*",
