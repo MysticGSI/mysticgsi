@@ -157,10 +157,22 @@ firmware or URL - Path to the firmware or URL to download it from
 --compress - Compress the output image into a ZIP
 --add <tag> - Add a tag to the build name
 --no-debloat - Keep the apps the patch set would otherwise remove
+--no-merge - Build separate images instead of merging partitions into system
 --avb-key /path/to/key.pem - Sign with the specified RSA private key
 ```
 
 By default, an image is signed with AOSP's AVB RSA-2048 test key. You can pass `--avb-key /path/to/key.pem` to sign with your own RSA private key.
+
+To keep separate system and product partitions:
+
+```sh
+.venv/bin/python cli.py build lg firmware.kdz --no-merge --compress
+```
+
+This writes `*-system.img`, `*-product.img`, and images for any other partitions
+normally merged into system. Partitions already inside system stay there.
+The ZIP contains each image as `<partition>.img`; `rebuild` keeps this layout.
+These images require a device that mounts the separate partitions.
 
 Example:
 

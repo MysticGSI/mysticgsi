@@ -29,11 +29,15 @@ def signing_parameters(key_path=None):
         raise ValueError("Invalid or encrypted AVB RSA private key") from None
     bits = key.size_in_bits()
     if not key.has_private() or bits not in (2048, 4096, 8192):
-        raise ValueError("AVB requires a 2048, 4096 or 8192-bit RSA private key")
+        raise ValueError(
+            "AVB requires a 2048, 4096 or 8192-bit RSA private key"
+        )
     return path, f"SHA256_RSA{bits}"
 
 
-def sign_system_image(image, logger=None, key_path=None):
+def sign_system_image(
+    image, logger=None, key_path=None, partition_name="system"
+):
     """Signs and verifies a staged image; returns the avbtool exit code."""
     log = logger or print
     try:
@@ -42,7 +46,7 @@ def sign_system_image(image, logger=None, key_path=None):
         log(f"Invalid AVB signing key: {error}")
         return 1
     label = "custom AVB key" if key_path else "AOSP AVB test key"
-    log(f"Signing system image with {label} ({algorithm})")
+    log(f"Signing {partition_name} image with {label} ({algorithm})")
     command = [sys.executable, AVBTOOL]
     rc = fsops.run(
         command
@@ -51,7 +55,7 @@ def sign_system_image(image, logger=None, key_path=None):
             "--image",
             image,
             "--partition_name",
-            "system",
+            partition_name,
             "--partition_size",
             "0",
             "--algorithm",

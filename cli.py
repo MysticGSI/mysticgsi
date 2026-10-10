@@ -101,6 +101,9 @@ def append_list(wt: make.RomPorter):
             "output": wt.output,
             "output_name": wt.output_name,
             "output_path": wt.output_path,
+            "no_merge": wt.no_merge,
+            "image_partitions": wt.image_partitions,
+            "output_images": wt.output_images,
         }
     )
     write_list(entries)
@@ -153,12 +156,15 @@ def cmd_build(args):
     try:
         wt = make.RomPorter(args.name, args.add)
         wt.rom_type = make.safe_name(rom_type, "rom_type")
-        wt.override_rom_type = make.safe_name(rom_custom or "default", "rom_custom")
+        wt.override_rom_type = make.safe_name(
+            rom_custom or "default", "rom_custom"
+        )
     except ValueError as e:
         print(e, file=sys.stderr)
         return 2
     wt.logger = ConsoleLogger()
     wt.debloat = not args.no_debloat
+    wt.no_merge = args.no_merge
     wt.avb_key = args.avb_key
 
     with buildlock.hold(on_busy=wait_for_lock):
@@ -185,7 +191,8 @@ def cmd_build(args):
     print()
     print(summarize(wt.output))
     print()
-    print(f"{wt.output_path}.img")
+    for image in wt.output_images.values():
+        print(image)
     if args.compress:
         print(f"{wt.output_path}.zip")
     return 0
@@ -193,7 +200,9 @@ def cmd_build(args):
 
 def cmd_rebuild(args):
     entries = read_list()
-    entry = next((e for e in reversed(entries) if e.get("rom_name") == args.name), None)
+    entry = next(
+        (e for e in reversed(entries) if e.get("rom_name") == args.name), None
+    )
     if entry is None:
         print(f"no build named {args.name!r} in {GSILIST}", file=sys.stderr)
         return 1
@@ -205,6 +214,8 @@ def cmd_rebuild(args):
 
     wt = make.RomPorter(entry["rom_name"], entry.get("variant_tag", ""))
     wt.avb_key = args.avb_key
+    wt.no_merge = entry.get("no_merge", False)
+    wt.image_partitions = entry.get("image_partitions", ["system"])
     wt.logger = ConsoleLogger()
     with buildlock.hold(on_busy=wait_for_lock):
         system_size = wt.rebuild(entry["output_name"])
@@ -215,9 +226,16 @@ def cmd_rebuild(args):
             print("compression failed", file=sys.stderr)
             return 1
         entry["output"] = make.replace_image_size(entry["output"], system_size)
+        entry["output_images"] = wt.output_images
         write_list(entries)
 
-    print(f"\n{wt.output_path}.img ({make.bytes_to_human(system_size)})")
+    print()
+    for part, image in wt.output_images.items():
+        size = (
+            f" ({make.bytes_to_human(system_size)})"
+            if part == "system" else ""
+        )
+        print(f"{image}{size}")
     if args.compress:
         print(f"{wt.output_path}.zip")
     return 0
@@ -230,15 +248,23 @@ def cmd_list(args):
         return 0
 
     for i, entry in enumerate(entries):
-        img = f"{entry.get('output_path', '')}.img"
-        mark = "" if os.path.exists(img) else "  (missing)"
-        print(f"{i}: {entry.get('output_name', '?')}\n   {img}{mark}")
+        images = entry.get("output_images") or {
+            "system": f"{entry.get('output_path', '')}.img"
+        }
+        print(f"{i}: {entry.get('output_name', '?')}")
+        for image in images.values():
+            mark = "" if os.path.exists(image) else "  (missing)"
+            print(f"   {image}{mark}")
     return 0
 
 
 def cmd_clean(args):
     with buildlock.hold(on_busy=wait_for_lock):
-        targets = [e for d in ("tmp", "out") for e in glob.glob(os.path.join(d, "*"))]
+        targets = [
+            entry
+            for directory in ("tmp", "out")
+            for entry in glob.glob(os.path.join(directory, "*"))
+        ]
         if not targets:
             print("nothing to clean")
             return 0
@@ -286,9 +312,15 @@ def main():
     )
     sub = ap.add_subparsers(dest="command", required=True)
 
-    build = sub.add_parser("build", help="build a GSI from a URL or a local file")
-    build.add_argument("name", help="short name for the build; names out/<name>/")
-    build.add_argument("source", help="firmware URL or path to a local archive")
+    build = sub.add_parser(
+        "build", help="build a GSI from a URL or a local file"
+    )
+    build.add_argument(
+        "name", help="short name for the build; names out/<name>/"
+    )
+    build.add_argument(
+        "source", help="firmware URL or path to a local archive"
+    )
     build.add_argument(
         "--type",
         default="auto",
@@ -298,7 +330,14 @@ def main():
     build.add_argument(
         "--add", default="", help="tag appended to the build's display name"
     )
-    build.add_argument("--compress", action="store_true", help="also produce a .zip")
+    build.add_argument(
+        "--compress", action="store_true", help="also produce a .zip"
+    )
+    build.add_argument(
+        "--no-merge",
+        action="store_true",
+        help="build separate images instead of merging partitions into system",
+    )
     build.add_argument(
         "--no-debloat",
         action="store_true",
@@ -308,11 +347,13 @@ def main():
 
     rebuild = sub.add_parser(
         "rebuild",
-        help="rebuild a build's image from its (edited) tree in "
-        "tmp/<name>/images/system",
+        help="rebuild a build's images from its (edited) trees in "
+        "tmp/<name>/images",
     )
     rebuild.add_argument("name", help="name of an earlier build")
-    rebuild.add_argument("--compress", action="store_true", help="also produce a .zip")
+    rebuild.add_argument(
+        "--compress", action="store_true", help="also produce a .zip"
+    )
     for command in (build, rebuild):
         command.add_argument(
             "--avb-key",
@@ -325,8 +366,12 @@ def main():
     lst = sub.add_parser("list", help=f"list builds recorded in {GSILIST}")
     lst.set_defaults(func=cmd_list)
 
-    clean = sub.add_parser("clean", help="remove everything under tmp/ and out/")
-    clean.add_argument("-y", "--yes", action="store_true", help="skip the confirmation")
+    clean = sub.add_parser(
+        "clean", help="remove everything under tmp/ and out/"
+    )
+    clean.add_argument(
+        "-y", "--yes", action="store_true", help="skip the confirmation"
+    )
     clean.set_defaults(func=cmd_clean)
 
     args = ap.parse_args()

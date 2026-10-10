@@ -38,7 +38,11 @@ def clean_stub_directories(system_dir: str):
         os.makedirs(stub_path, exist_ok=True)
 
 
-def _fs_config_root(source_dir: str, staging_dir: str) -> str:
+def _fs_config_root(
+    source_dir: str,
+    staging_dir: str,
+    partition_dirs: Optional[dict[str, str]] = None,
+) -> str:
     """
     Lays out the ROM's fs_config tables where e2fsdroid's -p looks for them
     (<root>/<partition>/etc/fs_config_*), so the image gets the stock
@@ -49,6 +53,11 @@ def _fs_config_root(source_dir: str, staging_dir: str) -> str:
     sources = {"system": os.path.join(source_dir, "system", "etc")}
     for part in MERGED_PARTITIONS:
         sources[part] = os.path.join(source_dir, "system", part, "etc")
+    for part, path in (partition_dirs or {}).items():
+        etc = os.path.join(path, "etc")
+        if part == "system" and os.path.isdir(os.path.join(path, "system")):
+            etc = os.path.join(path, "system", "etc")
+        sources[part] = etc
 
     for part, etc in sources.items():
         for name in FS_CONFIG_FILES:
@@ -83,13 +92,16 @@ def build_system_image(
     file_contexts_path: Optional[str] = None,
     stock_labels_path: Optional[str] = None,
     logger=None,
+    mount_point: str = "/",
+    partition_dirs: Optional[dict[str, str]] = None,
 ) -> int:
     """
     Builds an ext4 image of system_size bytes from source_dir. SELinux
     file_contexts are generated into staging_dir unless file_contexts_path
     is given, filling the ROM rules' gaps from stock_labels_path (a JSON
-    map of paths in source_dir to the labels their images had). Returns 0
-    on success.
+    map of paths in source_dir to the labels their images had). Other
+    partitions use their mount_point and share contexts and fs_config tables
+    from partition_dirs. Returns 0 on success.
     """
     log = logger or print
     source_dir = Path(source_dir).resolve().as_posix()
@@ -109,7 +121,8 @@ def build_system_image(
         log(f"Error: Source directory not found: {source_dir}")
         return 1
 
-    clean_stub_directories(source_dir)
+    if mount_point == "/":
+        clean_stub_directories(source_dir)
 
     work_dir = staging_dir or os.path.dirname(output_image) or "."
     if not file_contexts_path:
@@ -118,7 +131,15 @@ def build_system_image(
             with open(stock_labels_path, encoding="utf-8") as f:
                 stock_labels = json.load(f)
         file_contexts_path = prepare_file_contexts(
-            source_dir, os.path.join(work_dir, "file_contexts"), stock_labels
+            source_dir,
+            os.path.join(work_dir, "file_contexts"),
+            stock_labels,
+            context_dirs=[
+                os.path.join(path, relative)
+                for path in (partition_dirs or {}).values()
+                for relative in ("etc/selinux", "system/etc/selinux")
+            ],
+            mount_point=mount_point,
         )
 
     blocks = system_size // BLOCK_SIZE
@@ -141,11 +162,11 @@ def build_system_image(
         "-O",
         "^has_journal",
         "-L",
-        "/",
+        mount_point,
         "-I",
         "256",
         "-M",
-        "/",
+        mount_point,
         "-m",
         "0",
         "-t",
@@ -169,11 +190,13 @@ def build_system_image(
         "-T",
         DEFAULT_TIMESTAMP,
         "-p",
-        Path(_fs_config_root(source_dir, work_dir)).resolve().as_posix(),
+        Path(
+            _fs_config_root(source_dir, work_dir, partition_dirs)
+        ).resolve().as_posix(),
     ]
     if file_contexts_path and os.path.isfile(file_contexts_path):
         e2fsdroid_cmd += ["-S", Path(file_contexts_path).resolve().as_posix()]
-    e2fsdroid_cmd += ["-f", source_dir, "-a", "/", output_image]
+    e2fsdroid_cmd += ["-f", source_dir, "-a", mount_point, output_image]
     rc = _run_step("e2fsdroid", e2fsdroid_cmd, env, output_image, log)
     if rc != 0:
         return rc
@@ -183,5 +206,5 @@ def build_system_image(
         return 1
 
     size_mb = os.path.getsize(output_image) // (1024 * 1024)
-    log(f"System image created: {output_image} ({size_mb} MB)")
+    log(f"Image created: {output_image} ({size_mb} MB)")
     return 0
