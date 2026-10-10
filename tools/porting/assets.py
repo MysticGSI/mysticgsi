@@ -85,7 +85,7 @@ def apply_rom_patches(ctx: PatchContext) -> None:
     system_ext_prop = ctx.partition_prop("system_ext")
     system_ext = ctx.partition_dirs.get("system_ext")
     product = ctx.partition_dirs["product"]
-    patch_path = os.path.join(ctx.patches_dir, android_sdk)
+    patch_path = os.path.join(ctx.patches_dir, "all", android_version)
 
     rom_patches_dir = os.path.join(ctx.patches_dir, android_sdk, ctx.rom_type)
     if not re.fullmatch(r"\d+(?:\.\d+)*", android_version):

@@ -4,5 +4,5 @@ extend-exclude = ["tmp", "out", "*_pb2.py", "tools/avb/avbtool.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
-# fuck ES501 :)
+# fuck E501 :)
 extend-ignore = ["E501"]

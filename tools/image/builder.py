@@ -2,12 +2,12 @@
 Builds the ext4 system image with mke2fs and e2fsdroid.
 """
 
-from typing import Optional
-from pathlib import Path
 import json
 import os
 import shutil
 import subprocess
+from pathlib import Path
+from typing import Optional
 
 import fsops
 
@@ -17,7 +17,7 @@ from .contexts import prepare_file_contexts
 
 DEFAULT_TIMESTAMP = "1230768000"
 MKE2FS_CONFIG = Path(__file__).resolve().with_name("mke2fs.conf").as_posix()
-STUB_DIRS = ("persist", "bt_firmware", "firmware", "dsp", "cache")
+STUB_DIRS = ("persist", "dsp", "cache")
 FS_CONFIG_FILES = ("fs_config_files", "fs_config_dirs")
 # Partitions merged into the GSI's system tree whose own fs_config tables
 # still apply (libcutils maps system/<partition>/... onto <partition>/...).
