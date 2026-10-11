@@ -1,0 +1,71 @@
+{
+    "no_device_overlays": true,
+    "add_vendor_stuff": true,
+    "debloat": {
+        "system": {
+            "app": [],
+            "priv-app": [
+                "LocalTransport",
+                "ONS",
+                "Tag",
+                "TagGoogle"
+            ]
+        },
+        "product": {
+            "app": [
+                "LGWeather",
+                "LGCalculator",
+                "LGEmail",
+                "LGMusic",
+                "LGVideoPlayer",
+                "LGNotes",
+                "LGClock",
+                "LGGallery",
+                "LGCamera",
+                "LGKeyboard",
+                "LGMessaging",
+                "LGContacts",
+                "LGDialer",
+                "LGHealthCheck",
+                "LGSmartWorld",
+                "LGUpdater",
+                "LGSetupWizard",
+                "LGPhoneHelper",
+                "LGBackup",
+                "LGAccounts",
+                "LGHelpCenter",
+                "talkback",
+                "YouTube",
+                "YouTubeMusic",
+                "Maps",
+                "Gmail",
+                "Drive",
+                "Photos",
+                "Chrome",
+                "SpeechServicesByGoogle",
+                "GoogleAssistant",
+                "GooglePlay"
+            ],
+            "priv-app": [
+                "LGSystemUI",
+                "LGLauncher",
+                "LGHome",
+                "Velvet",
+                "AndroidAutoStub",
+                "FamilyLinkParentalControls"
+            ]
+        },
+        "system_ext": {
+            "app": [
+                "LGEngineerMode",
+                "LGCrashReport",
+                "LGDiagnosis",
+                "LGDataCollection",
+                "LGTestApp"
+            ],
+            "priv-app": [
+                "SetupWizard"
+            ]
+        }
+    }
+}
