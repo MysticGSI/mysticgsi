@@ -29,17 +29,13 @@
                 "Traceur",
                 "EasterEgg",
                 "LGATCMDService",
-                "LGLockScreenSettings_2",
-                "LGLockScreenSettings_Provider",
                 "LGStk"
             ],
             "priv-app": [
-                "GoogleExtServicesPrebuilt",
+               
                 "GoogleFeedback",
                 "GoogleOneTimeInitializer",
-                "GooglePackageInstaller",
                 "GooglePartnerSetup",
-                "GooglePermissionControllerPrebuilt",
                 "GoogleRestore",
                 "GoogleServicesFramework",
                 "Velvet",
@@ -65,7 +61,6 @@
                 "LGAccount",
                 "LGBroadcastRadioService",
                 "LGDrm",
-                "ModuleMetadataGooglePrebuilt",
                 "MtkFmService",
                 "elt_test",
                 "servicemenu",
