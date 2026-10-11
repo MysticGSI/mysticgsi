@@ -95,6 +95,11 @@ def detect_rom_type(ctx: PatchContext) -> None:
         for prop in props
         if prop and prop.get_device_brand()
     }
+
+    if "lge" in brands:
+        ctx.rom_type = "lgux"
+    return
+    
     if any(
         prop and prop.get_value("ro.build.version.oplusrom") for prop in props
     ):
