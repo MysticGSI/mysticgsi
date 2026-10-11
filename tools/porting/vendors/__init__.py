@@ -4,7 +4,7 @@ from typing import Literal
 
 from ..context import PatchContext
 from ..properties import SettingsProp
-from . import google, huawei, lenovo, nothing, oplus, samsung, xiaomi, zte
+from . import google, huawei, lenovo, lge, nothing, oplus, samsung, xiaomi, zte
 
 HookName = Literal[
     "copy_vendor_files",
