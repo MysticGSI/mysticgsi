@@ -26,6 +26,7 @@ VENDORS: dict[str, ModuleType] = {
     "realmeui": oplus,
     "oxygenos": oplus,
     "coloros": oplus,
+    "lgux": lge,
     "oneui": samsung,
     "miui": xiaomi,
     "hyperos": xiaomi,
