@@ -1,6 +1,6 @@
 {
     "no_device_overlays": true,
-    "add_vendor_stuff": true,
+    "add_vendor_stuff": false,
     "debloat": {
         "system": {
             "app": [
@@ -37,14 +37,12 @@
                 "GoogleOneTimeInitializer",
                 "GooglePartnerSetup",
                 "GoogleRestore",
-                "GoogleServicesFramework",
                 "Velvet",
                 "AndroidAutoStub",
                 "Wellbeing",
                 "Turbo",
                 "LGBluetoothSetting",
                 "LGLDB",
-                "LGWallpaperPicker",
                 "LGWfdsServices",
                 "LGP2pService",
                 "LGSmartSharePush",
