@@ -49,6 +49,18 @@ WINGET_PACKAGES = [
     "EclipseAdoptium.Temurin.26.JDK",
 ]
 
+DNF_PACKAGES = [
+    "python3",
+    "python3-pip",
+    "curl",
+    "aria2",
+    "openssl",
+    "patch",
+    "ca-certificates",
+    "libarchive",
+    "java-17-openjdk-headless"
+]
+
 
 def as_root(cmd):
     if os.getuid() != 0:
@@ -128,6 +140,15 @@ def setup_windows(dev):
             result.check_returncode()
     make_venv(sys.executable, dev)
 
+def setup_fedora(dev):
+    print("Installing dnf packages")
+    as_root(["dnf", "update"])
+    as_root(["dnf", "install", "-y", "--skip-unavailable", *DNF_PACKAGES])
+    if not shutil.which("java"):
+        print("Java not found. Installing java-17-openjdk-headless")
+        as_root(["dnf", "install", "-y", "java-17-openjdk-headless"])
+    make_venv("python3", dev)
+
 
 def check_distro():
     release = {}
@@ -144,6 +165,8 @@ def check_distro():
         return "arch"
     if "nixos" in distros:
         return "nixos"
+    if "fedora" in distros:
+        return "fedora"
     raise RuntimeError("Unsupported Linux distro")
 
 
@@ -187,6 +210,8 @@ def main():
             setup_arch(dev)
         elif distro == "nixos":
             setup_nixos()
+        elif distro == "fedora":
+            setup_fedora(dev)
     elif system == "Windows":
         setup_windows(dev)
     else:
