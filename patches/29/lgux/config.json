@@ -1,0 +1,53 @@
+{
+  "no_device_overlays": false,
+  "add_vendor_stuff": false,
+  "debloat": {
+    "system": {
+      "app": [],
+      "priv-app": [
+        "LGLDB"
+      ]
+    },
+    "product": {
+      "app": [
+        "GnssTest",
+        "GnssPosTest",
+        "SmartShare",
+        "SmartShareProvider",
+        "LGWeather",
+        "LGWeatherTheme",
+        "LGMusic",
+        "LGRemoteCall",
+        "PlayAutoInstall_stub"
+      ],
+      "priv-app": [
+        "LIASmartCareEngine",
+        "LIAInformant",
+        "ThemePackage_White",
+        "LGHome_Theme_Optimus",
+        "LGHiFiRecorder",
+        "LGMusicPicker",
+        "LGVideo",
+        "LGVideoStudio",
+        "SmartDoctorWebView",
+        "LGPrivacylock",
+        "LGPCSuiteService",
+        "LGFmRadio",
+        "LGDMFCM",
+        "LGEmail"
+      ]
+    },
+    "product/OP": {
+      "app": [
+        "LGWeatherTheme",
+        "LGMusic",
+        "LGRemoteCall",
+        "PlayAutoInstall_stub"
+      ],
+      "priv-app": [
+        "LGEmail",
+        "LGDMFCM"
+      ]
+    }
+  }
+}

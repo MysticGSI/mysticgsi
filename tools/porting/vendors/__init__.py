@@ -4,7 +4,7 @@ from typing import Literal
 
 from ..context import PatchContext
 from ..properties import SettingsProp
-from . import google, huawei, lenovo, nothing, oplus, samsung, xiaomi, zte
+from . import google, huawei, lenovo, lge, nothing, oplus, samsung, xiaomi, zte
 
 HookName = Literal[
     "copy_vendor_files",
@@ -26,6 +26,7 @@ VENDORS: dict[str, ModuleType] = {
     "realmeui": oplus,
     "oxygenos": oplus,
     "coloros": oplus,
+    "lgux": lge,
     "oneui": samsung,
     "miui": xiaomi,
     "hyperos": xiaomi,
@@ -94,6 +95,11 @@ def detect_rom_type(ctx: PatchContext) -> None:
         for prop in props
         if prop and prop.get_device_brand()
     }
+
+    if "lge" in brands:
+        ctx.rom_type = "lgux"
+    return
+    
     if any(
         prop and prop.get_value("ro.build.version.oplusrom") for prop in props
     ):
