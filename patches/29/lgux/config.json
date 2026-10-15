@@ -1,5 +1,5 @@
 {
-  "no_device_overlays": true,
+  "no_device_overlays": false,
   "add_vendor_stuff": false,
   "debloat": {
     "system": {
