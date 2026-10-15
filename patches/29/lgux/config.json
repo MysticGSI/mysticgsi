@@ -5,55 +5,48 @@
     "system": {
       "app": [],
       "priv-app": [
-        "LGKeyguardEffect",
-        "LGSetupView",
-        "HomeSelector",
-        "LGSmartSharePush",
-        "LGP2pService",
-        "LGLDB",
-        "LGEIME_HWR_SOLUTION_DIOPEN"
+        "LGLDB"
       ]
     },
     "product": {
       "app": [
-        "LGBroadcastRadioService",
         "GnssTest",
-        "SmartShareProvider",
-        "SmartShare",
-        "AutoSIMLockService",
         "GnssPosTest",
-        "LGRemoteCall",
-        "PlayAutoInstall_stub",
-        "LGFOTA",
-        "LGAccount",
+        "SmartShare",
+        "SmartShareProvider",
         "LGWeather",
+        "LGWeatherTheme",
         "LGMusic",
-        "servicemenu",
-        "SDEncryptionHelper"
+        "LGRemoteCall",
+        "PlayAutoInstall_stub"
       ],
       "priv-app": [
-        "LGWeatherService",
-        "LGApplicationManager",
-        "LGFmRadio",
         "LIASmartCareEngine",
-        "LGMapUI",
-        "GCUV",
-        "LGPCSuiteService",
-        "RunningTaskBar",
-        "LGPrivacylock",
-        "Miniview",
-        "LGBackup",
-        "LGMyPhoneCare",
-        "LGVideo",
-        "SmartDoctorWebView",
-        "LGVideoStudio",
+        "LIAInformant",
+        "ThemePackage_White",
+        "LGHome_Theme_Optimus",
         "LGHiFiRecorder",
         "LGMusicPicker",
+        "LGVideo",
+        "LGVideoStudio",
+        "SmartDoctorWebView",
+        "LGPrivacylock",
+        "LGPCSuiteService",
+        "LGFmRadio",
+        "LGDMFCM",
+        "LGEmail"
+      ]
+    },
+    "product/OP": {
+      "app": [
+        "LGWeatherTheme",
+        "LGMusic",
+        "LGRemoteCall",
+        "PlayAutoInstall_stub"
+      ],
+      "priv-app": [
         "LGEmail",
-        "Leccp",
-        "LIAInformant",
-        "LGInstallService",
-        "LGQMemoplus"
+        "LGDMFCM"
       ]
     }
   }
