@@ -55,10 +55,14 @@ class PatchContext:
     rom_type: str = "auto"
     override_rom_type: str = "default"
     debloat: bool = True
+    no_merge: bool = False
     props: dict[str, SettingsProp] = field(default_factory=dict)
     info: DeviceInfo = field(default_factory=DeviceInfo)
     is_64bit_only: bool = False
     programs_32bit_only: list[str] = field(default_factory=list)
+
+    def exclude_patch_file(self, name: str) -> bool:
+        return self.no_merge and name == "skip_mount.cfg"
 
     def system_root(self) -> str:
         system = self.partition_dirs["system"]

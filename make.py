@@ -252,6 +252,7 @@ class RomPorter:
         ctx.rom_type = self.rom_type
         ctx.override_rom_type = self.override_rom_type
         ctx.debloat = self.debloat
+        ctx.no_merge = self.no_merge
         ctx.patches_dir = patches_dir
         try:
             ctx.resolve_partitions()

@@ -37,9 +37,15 @@ def apply_generic_patches(ctx: PatchContext) -> None:
             os.path.join(patch_path, "product.prop"), product_prop_path
         )
 
-    fsops.cp_r(f"{patch_path}/system", f"{system}/")
+    fsops.cp_r(
+        f"{patch_path}/system", f"{system}/",
+        exclude=ctx.exclude_patch_file,
+    )
     if system_ext and os.path.exists(os.path.join(patch_path, "system_ext")):
-        fsops.cp_r(f"{patch_path}/system_ext", f"{system_ext}/../")
+        fsops.cp_r(
+            f"{patch_path}/system_ext", f"{system_ext}/../",
+            exclude=ctx.exclude_patch_file,
+        )
 
     if os.path.exists(os.path.join(patch_path, "file_contexts")):
         fsops.append_file(
@@ -160,7 +166,9 @@ def apply_rom_patches(ctx: PatchContext) -> None:
             else:
                 dst = ctx.partition_dirs[partition]
 
-            fsops.cp_r(f"{src}/*", f"{dst}/")
+            fsops.cp_r(
+                f"{src}/*", f"{dst}/", exclude=ctx.exclude_patch_file
+            )
 
     rw_system_add = os.path.join(rom_patches_dir, "rw-system-add.sh")
     if os.path.exists(rw_system_add):
