@@ -195,6 +195,20 @@ Example:
     --type pixel --compress
 ```
 
+## Old-device / MediaTek companion projects
+
+This branch documents optional companion projects for downstream Android ROM
+work. MysticGSI itself builds images from stock firmware; it does not provide
+Android `brunch` targets or automatically include these projects in its output.
+Use the tools below only in the appropriate Android build or device workflow,
+and review each project's own instructions and licensing before use.
+
+- [MediaTek BPF kernel patcher](https://github.com/R0rt1z2/mtk-bpf-patcher) — a separate tool for patching supported MediaTek kernel images. Its upstream documentation notes testing on Linux 4.14.x and 4.19.x kernels; verify that a kernel is compatible and keep an original backup before attempting a patch.
+- [Hardware overlays](https://github.com/Doze-off/vendor_hardware_overlay) — Android product overlay resources intended for integration in a compatible Android ROM build. Follow the repository's build instructions; these overlays are not installed into a MysticGSI image by this project.
+- [Treble App](https://github.com/Doze-off/treble_app-doze) — an Android application for Treble ROMs. It must be built and packaged through a compatible Android app/ROM workflow; MysticGSI does not build or bundle it.
+
+These references are informational only. They do not add device-specific MTK support, guarantee that an old device can boot a GSI, or replace device/kernel-specific validation.
+
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
@@ -203,7 +217,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 .venv/bin/ruff check .
 ```
 
-Patch files of 50 MiB or more are stored xz-compressed (`<name>.xz`) and unpacked during builds. After adding one, run `./tools/assets.py pack` and commit the `.xz` files (or `.xz.000`, `.xz.001`, ... for split archives).  
+Patch files of 50 MiB or more are stored xz-compressed (`<name>.xz`) and unpacked during builds. After adding one, run `./tools/assets.py pack` and commit the `.xz` files (or `.xz.000`, `.xz.001`[...]
 
 `./tools/assets.py status` shows what's packed.
 
