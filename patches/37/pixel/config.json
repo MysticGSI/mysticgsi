@@ -1,67 +1,29 @@
 {
-    "use_stock_init": true,
-    "debloat": {
-        "product": {
-            "app": [
-                "YouTubeMusicPrebuilt",
-                "YouTube",
-                "VZWAPNLib",
-                "Videos",
-                "Tycho",
-                "SoundAmplifierPrebuilt*",
-                "PrebuiltGmail",
-                "Photos",
-                "NgaResources",
-                "Maps",
-                "GoogleTTS",
-                "GoogleCamera",
-                "Drive",
-                "PixelCameraServicesBarbet",
-                "DevicePolicyPrebuilt*",
-                "talkback"
-            ],
-            "priv-app": [
-                "SCONE*",
-                "Velvet",
-                "TurboPrebuilt",
-                "SSRestartDetector",
-                "SprintDM",
-                "ScribePrebuilt*",
-                "RecorderPrebuilt*",
-                "OTAConfigNoZeroTouchPrebuilt",
-                "KidsSupervisionStub",
-                "HelpRtcPrebuilt",
-                "DCMO",
-                "ConnMO",
-                "BetaFeedback",
-                "GoogleCamera",
-                "WfcActivation",
-                "DevicePolicyPrebuilt*",
-                "EuiccGoogle",
-                "Euicc*",
-                "PixelCameraServices"
-            ]
-        },
-        "system": {
-            "app": [
-                "Stk"
-            ],
-            "priv-app": [
-                "TagGoogle"
-            ]
-        },
-        "system_ext": {
-            "app": [
-                "com.qualcomm.qti.services.secureui"
-            ],
-            "priv-app": [
-                "HbmSVManager",
-                "grilservice",
-                "Euicc*",
-                "PixelDisplayService",
-                "MyVerizonServices",
-                "YadaYada"
-            ]
-        }
+  "use_stock_init": true,
+  "debloat": {
+    "product": {
+      "app": [
+        "YouTubeMusicPrebuilt",
+        "YouTube",
+        "Videos",
+        "Photos",
+        "Maps",
+        "GoogleTTS",
+        "Drive",
+        "talkback"
+      ],
+      "priv-app": [
+        "ScribePrebuilt*",
+        "KidsSupervisionStub"
+      ]
+    },
+    "system": {
+      "app": [
+        "Stk"
+      ],
+      "priv-app": [
+        "TagGoogle"
+      ]
     }
+  }
 }
