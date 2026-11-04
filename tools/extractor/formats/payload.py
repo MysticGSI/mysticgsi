@@ -1,5 +1,7 @@
 """Android A/B OTA payload.bin extractor."""
 
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Set
 import bz2
 import lzma
@@ -36,11 +38,12 @@ class PayloadError(RuntimeError):
     pass
 
 
-def is_payload(file_path: str) -> bool:
+def is_payload(file_path: str, offset: int = 0) -> bool:
     if not os.path.isfile(file_path):
         return False
     try:
         with open(file_path, "rb") as f:
+            f.seek(offset)
             return f.read(4) == PAYLOAD_MAGIC
     except OSError:
         return False
@@ -97,12 +100,39 @@ def _check_op(op, partition: str):
         )
 
 
-def _extract_partition(f, part, out_path, data_offset, block_size):
+def _workers() -> int:
+    try:
+        return max(1, len(os.sched_getaffinity(0)))
+    except AttributeError:
+        return os.cpu_count() or 1
+
+
+def _decode(op_type, data: bytes) -> bytes:
+    return DECODERS[op_type](data)
+
+
+def _extract_partition(
+    f, part, out_path, data_offset, block_size, pool, window
+):
+    """
+    Reads op data sequentially and decompresses it on the pool: lzma, bz2
+    and zstandard release the GIL, so ops decode in parallel. Results are
+    written in op order, with at most `window` ops in flight.
+    """
     for op in part.operations:
         _check_op(op, part.partition_name)
 
+    def write(op, data):
+        pos = 0
+        for ext in op.dst_extents:
+            size = ext.num_blocks * block_size
+            out_f.seek(ext.start_block * block_size)
+            out_f.write(data[pos : pos + size].ljust(size, b"\x00"))
+            pos += size
+
     with open(out_path, "wb") as out_f:
         end = 0
+        pending = deque()
         for op in part.operations:
             for ext in op.dst_extents:
                 end = max(end, (ext.start_block + ext.num_blocks) * block_size)
@@ -111,13 +141,15 @@ def _extract_partition(f, part, out_path, data_offset, block_size):
                 continue
 
             f.seek(data_offset + op.data_offset)
-            data = DECODERS[op.type](f.read(op.data_length))
-            pos = 0
-            for ext in op.dst_extents:
-                size = ext.num_blocks * block_size
-                out_f.seek(ext.start_block * block_size)
-                out_f.write(data[pos : pos + size].ljust(size, b"\x00"))
-                pos += size
+            data = f.read(op.data_length)
+            pending.append((op, pool.submit(_decode, op.type, data)))
+            if len(pending) >= window:
+                done_op, fut = pending.popleft()
+                write(done_op, fut.result())
+
+        while pending:
+            done_op, fut = pending.popleft()
+            write(done_op, fut.result())
 
         if part.new_partition_info.size > 0:
             end = part.new_partition_info.size
@@ -129,8 +161,13 @@ def extract_payload(
     output_dir: str,
     target_partitions: Optional[Set[str]] = None,
     logger=None,
+    offset: int = 0,
 ) -> List[str]:
-    if not is_payload(payload_path):
+    """
+    Extracts full-OTA partitions from payload.bin. `offset` locates the
+    payload inside a larger file, e.g. stored uncompressed in an OTA zip.
+    """
+    if not is_payload(payload_path, offset):
         if logger:
             logger(f"Not a valid payload.bin: {payload_path}")
         return []
@@ -142,8 +179,9 @@ def extract_payload(
     extracted: List[str] = []
     targets = {p.lower() for p in target_partitions} if target_partitions else None
 
-    with open(payload_path, "rb") as f:
-        f.seek(len(PAYLOAD_MAGIC))
+    workers = _workers()
+    with open(payload_path, "rb") as f, ThreadPoolExecutor(workers) as pool:
+        f.seek(offset + len(PAYLOAD_MAGIC))
         version = struct.unpack(">Q", f.read(8))[0]
         manifest_size = struct.unpack(">Q", f.read(8))[0]
         metadata_sig_size = 0
@@ -188,7 +226,9 @@ def extract_payload(
             out_path = os.path.join(output_dir, f"{name}.img")
             if logger:
                 logger(f"Extracting payload partition {name}...")
-            _extract_partition(f, part, out_path, data_offset, block_size)
+            _extract_partition(
+                f, part, out_path, data_offset, block_size, pool, workers * 4
+            )
 
             if os.path.getsize(out_path) > 0:
                 extracted.append(out_path)
