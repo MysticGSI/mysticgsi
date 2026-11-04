@@ -152,6 +152,7 @@
                 "MiuiCamera",
                 "Music",
                 "Velvet",
+                "VelvetCtS",
                 "SoundRecorder",
                 "AndroidAutoStub",
                 "FamilyLinkParentalControls",
@@ -177,6 +178,7 @@
                 "MIUIBrowser",
                 "MIUIPersonalAssistant",
                 "MiBrowserGlobal_builtin_before_2021",
+                "MIBrowserGlobal_builtin_before_2021",
                 "MIUICleanMasterGlobalPad",
                 "MIUIMusicGlobalPad",
                 "VoiceAssistAndroidT",
@@ -216,6 +218,8 @@
             ],
             "product/priv-app": [
                 "MiBrowserGlobal_builtin_before_2021",
+                "MIBrowserGlobal_builtin_before_2021",
+                "MIUIVideoPlayer",
                 "MIUIYellowPageGlobal",
                 "EntelCotaService"
             ]
