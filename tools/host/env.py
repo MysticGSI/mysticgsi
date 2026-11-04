@@ -136,11 +136,11 @@ def find_tool(tool_name: str) -> str | None:
     return None
 
 
-def check_environment() -> None:
+def check_environment(extra_tools: tuple[str, ...] = ()) -> None:
     """Raises RuntimeError if the image build tools are missing."""
     configure_environment()
 
-    missing = [t for t in REQUIRED_TOOLS if not find_tool(t)]
+    missing = [t for t in REQUIRED_TOOLS + extra_tools if not find_tool(t)]
     if missing:
         raise RuntimeError(
             f"Missing native image tools: {', '.join(missing)}. Run ./setup_host.py first."

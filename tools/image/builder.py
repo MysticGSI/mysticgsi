@@ -1,5 +1,6 @@
 """
-Builds the ext4 system image with mke2fs and e2fsdroid.
+Builds the system image: ext4 with mke2fs and e2fsdroid, or EROFS with
+mkfs.erofs.
 """
 
 import json
@@ -15,6 +16,7 @@ from ..config import BLOCK_SIZE
 from ..host import configure_environment, find_tool
 from .contexts import prepare_file_contexts
 
+EROFS_COMPRESSORS = ("lz4", "lz4hc", "lzma")
 DEFAULT_TIMESTAMP = "1230768000"
 MKE2FS_CONFIG = Path(__file__).resolve().with_name("mke2fs.conf").as_posix()
 STUB_DIRS = ("persist", "dsp", "cache")
@@ -84,6 +86,69 @@ def _run_step(name, cmd, env, output_image, log) -> int:
     return res.returncode
 
 
+def _prepare_source(source_dir: str, mount_point: str) -> None:
+    if mount_point == "/":
+        clean_stub_directories(source_dir)
+
+    # Keep mke2fs's root-owned directory instead of copying host metadata.
+    lost_found = os.path.join(source_dir, "lost+found")
+    if (
+        os.path.isdir(lost_found)
+        and not fsops.islink(lost_found)
+        and not os.listdir(lost_found)
+    ):
+        os.rmdir(lost_found)
+
+
+def _file_contexts(
+    source_dir: str,
+    work_dir: str,
+    stock_labels_path: Optional[str],
+    mount_point: str,
+    partition_dirs: Optional[dict[str, str]],
+) -> Optional[str]:
+    stock_labels = None
+    if stock_labels_path and os.path.isfile(stock_labels_path):
+        with open(stock_labels_path, encoding="utf-8") as f:
+            stock_labels = json.load(f)
+    return prepare_file_contexts(
+        source_dir,
+        os.path.join(work_dir, "file_contexts"),
+        stock_labels,
+        context_dirs=[
+            os.path.join(path, relative)
+            for path in (partition_dirs or {}).values()
+            for relative in ("etc/selinux", "system/etc/selinux")
+        ],
+        mount_point=mount_point,
+    )
+
+
+def _strip_host_xattrs(source_dir: str) -> None:
+    """
+    mkfs.erofs copies the build host's xattrs, such as POSIX ACLs, into the
+    image; e2fsdroid never does. It already skips the host's SELinux labels
+    when given file_contexts, and those can't be removed anyway.
+    """
+    if not hasattr(os, "listxattr"):
+        return
+    paths = [source_dir]
+    for root, dirs, files in os.walk(source_dir):
+        paths.extend(os.path.join(root, name) for name in dirs + files)
+    for path in paths:
+        try:
+            names = os.listxattr(path, follow_symlinks=False)
+        except OSError:
+            continue
+        for name in names:
+            if name == "security.selinux":
+                continue
+            try:
+                os.removexattr(path, name, follow_symlinks=False)
+            except OSError:
+                pass
+
+
 def build_system_image(
     source_dir: str,
     output_image: str,
@@ -121,34 +186,13 @@ def build_system_image(
         log(f"Error: Source directory not found: {source_dir}")
         return 1
 
-    if mount_point == "/":
-        clean_stub_directories(source_dir)
-
-    # Keep mke2fs's root-owned directory instead of copying host metadata.
-    lost_found = os.path.join(source_dir, "lost+found")
-    if (
-        os.path.isdir(lost_found)
-        and not fsops.islink(lost_found)
-        and not os.listdir(lost_found)
-    ):
-        os.rmdir(lost_found)
+    _prepare_source(source_dir, mount_point)
 
     work_dir = staging_dir or os.path.dirname(output_image) or "."
     if not file_contexts_path:
-        stock_labels = None
-        if stock_labels_path and os.path.isfile(stock_labels_path):
-            with open(stock_labels_path, encoding="utf-8") as f:
-                stock_labels = json.load(f)
-        file_contexts_path = prepare_file_contexts(
-            source_dir,
-            os.path.join(work_dir, "file_contexts"),
-            stock_labels,
-            context_dirs=[
-                os.path.join(path, relative)
-                for path in (partition_dirs or {}).values()
-                for relative in ("etc/selinux", "system/etc/selinux")
-            ],
-            mount_point=mount_point,
+        file_contexts_path = _file_contexts(
+            source_dir, work_dir, stock_labels_path, mount_point,
+            partition_dirs,
         )
 
     blocks = system_size // BLOCK_SIZE
@@ -212,6 +256,93 @@ def build_system_image(
 
     if not os.path.isfile(output_image) or os.path.getsize(output_image) == 0:
         log("Error: Output image is missing or empty after e2fsdroid")
+        return 1
+
+    size_mb = os.path.getsize(output_image) // (1024 * 1024)
+    log(f"Image created: {output_image} ({size_mb} MB)")
+    return 0
+
+
+def build_erofs_image(
+    source_dir: str,
+    output_image: str,
+    compressor: str,
+    staging_dir: Optional[str] = None,
+    file_contexts_path: Optional[str] = None,
+    stock_labels_path: Optional[str] = None,
+    logger=None,
+    mount_point: str = "/",
+    partition_dirs: Optional[dict[str, str]] = None,
+) -> int:
+    """
+    Builds an EROFS image from source_dir compressed with compressor (one
+    of EROFS_COMPRESSORS), sized to fit. Labels, owners, modes and
+    capabilities come from the same sources as build_system_image's.
+    Returns 0 on success.
+    """
+    log = logger or print
+    source_dir = Path(source_dir).resolve().as_posix()
+    output_image = Path(output_image).resolve().as_posix()
+
+    if compressor not in EROFS_COMPRESSORS:
+        log(f"Error: Unknown EROFS compressor: {compressor}")
+        return 1
+
+    configure_environment()
+    mkfs_bin = find_tool("mkfs.erofs")
+    if not mkfs_bin:
+        log("Error: mkfs.erofs executable not found")
+        return 1
+
+    if not os.path.isdir(source_dir):
+        log(f"Error: Source directory not found: {source_dir}")
+        return 1
+
+    _prepare_source(source_dir, mount_point)
+    _strip_host_xattrs(source_dir)
+
+    work_dir = staging_dir or os.path.dirname(output_image) or "."
+    if not file_contexts_path:
+        file_contexts_path = _file_contexts(
+            source_dir, work_dir, stock_labels_path, mount_point,
+            partition_dirs,
+        )
+
+    out_dir = os.path.dirname(output_image)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
+    log(f"Creating {compressor}-compressed EROFS filesystem")
+    # mkfs.erofs defaults to the host's page size (16K on Apple silicon),
+    # which devices with 4K pages can't mount. --product-out finds the ROM's
+    # fs_config tables the way e2fsdroid's -p does.
+    mkfs_cmd = [
+        mkfs_bin,
+        f"-z{compressor}",
+        "-b",
+        str(BLOCK_SIZE),
+        "-T",
+        DEFAULT_TIMESTAMP,
+        f"--mount-point={mount_point}",
+        "--product-out="
+        + Path(
+            _fs_config_root(source_dir, work_dir, partition_dirs)
+        ).resolve().as_posix(),
+    ]
+    if file_contexts_path and os.path.isfile(file_contexts_path):
+        mkfs_cmd.append(
+            "--file-contexts="
+            + Path(file_contexts_path).resolve().as_posix()
+        )
+    mkfs_cmd += [output_image, source_dir]
+    rc = _run_step(
+        "mkfs.erofs", mkfs_cmd, os.environ.copy(), output_image, log
+    )
+    if rc != 0:
+        return rc
+
+    if not os.path.isfile(output_image) or os.path.getsize(output_image) == 0:
+        log("Error: Output image is missing or empty after mkfs.erofs")
         return 1
 
     size_mb = os.path.getsize(output_image) // (1024 * 1024)

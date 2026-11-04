@@ -137,7 +137,7 @@ python -m venv .venv
 ## Usage
 
 ```sh
-.venv/bin/python cli.py build <name> <firmware|URL> [--type <type>] [--compress]
+.venv/bin/python cli.py build <name> <firmware|URL> [--type <type>] [--format <lz4|lz4hc|lzma>] [--compress]
 .venv/bin/python cli.py rebuild <name> [--compress]
 .venv/bin/python cli.py list
 .venv/bin/python cli.py clean
@@ -171,6 +171,7 @@ firmware or URL - Path to the firmware or URL to download it from
 --add <tag> - Add a tag to the build name
 --no-debloat - Keep the apps the patch set would otherwise remove
 --no-merge - Build separate images instead of merging partitions into system
+--format <lz4|lz4hc|lzma> - Build EROFS with this compressor instead of ext4
 --avb-key /path/to/key.pem - Sign with the specified RSA private key
 ```
 
@@ -186,6 +187,11 @@ This writes `*-system.img`, `*-product.img`, and images for any other partitions
 normally merged into system. Partitions already inside system stay there.
 The ZIP contains each image as `<partition>.img`; `rebuild` keeps this layout.
 These images require a device that mounts the separate partitions.
+
+By default, images are ext4. `--format` builds EROFS instead, typically
+30-50% smaller: lz4hc saves less than lzma but reads faster on the device.
+The target device's kernel and fstab must support EROFS, and lzma needs
+`CONFIG_EROFS_FS_ZIP_LZMA`. `rebuild` keeps the format of the original build.
 
 Example:
 

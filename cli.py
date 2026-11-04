@@ -102,6 +102,7 @@ def append_list(wt: make.RomPorter):
             "output_name": wt.output_name,
             "output_path": wt.output_path,
             "no_merge": wt.no_merge,
+            "format": wt.erofs_format,
             "image_partitions": wt.image_partitions,
             "output_images": wt.output_images,
         }
@@ -145,9 +146,13 @@ def wait_for_lock():
     print("waiting for another build to finish...", flush=True)
 
 
+def erofs_tools(erofs_format):
+    return ("mkfs.erofs",) if erofs_format else ()
+
+
 def cmd_build(args):
     try:
-        tools.check_environment()
+        tools.check_environment(erofs_tools(args.format))
     except (RuntimeError, OSError) as e:
         print(e, file=sys.stderr)
         return 1
@@ -165,6 +170,7 @@ def cmd_build(args):
     wt.logger = ConsoleLogger()
     wt.debloat = not args.no_debloat
     wt.no_merge = args.no_merge
+    wt.erofs_format = args.format
     wt.avb_key = args.avb_key
 
     with buildlock.hold(on_busy=wait_for_lock):
@@ -207,7 +213,7 @@ def cmd_rebuild(args):
         print(f"no build named {args.name!r} in {GSILIST}", file=sys.stderr)
         return 1
     try:
-        tools.check_environment()
+        tools.check_environment(erofs_tools(entry.get("format")))
     except (RuntimeError, OSError) as e:
         print(e, file=sys.stderr)
         return 1
@@ -215,6 +221,7 @@ def cmd_rebuild(args):
     wt = make.RomPorter(entry["rom_name"], entry.get("variant_tag", ""))
     wt.avb_key = args.avb_key
     wt.no_merge = entry.get("no_merge", False)
+    wt.erofs_format = entry.get("format")
     wt.image_partitions = entry.get("image_partitions", ["system"])
     wt.logger = ConsoleLogger()
     with buildlock.hold(on_busy=wait_for_lock):
@@ -342,6 +349,13 @@ def main():
         "--no-debloat",
         action="store_true",
         help="keep the apps the ROM's patch set would remove",
+    )
+    build.add_argument(
+        "--format",
+        choices=tools.EROFS_COMPRESSORS,
+        help="build EROFS compressed with this instead of ext4; typically "
+        "30-50%% smaller, but the target device's kernel and fstab must "
+        "support EROFS (and lzma)",
     )
     build.set_defaults(func=cmd_build)
 
