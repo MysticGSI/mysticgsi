@@ -19,3 +19,9 @@ https://github.com/TrebleDroid/treble_app
 These are published without a license. They remain the property of their
 authors, are included with credit, and are not covered by the Apache
 License.
+
+tools/bin/*/mkfs.erofs and tools/bin/Windows/AMD64/mkfs.erofs.exe are the
+v1.8.10-251217 release binaries of https://github.com/sekaiacg/erofs-utils,
+a downstream fork of erofs-utils (GPL-2.0-or-later) built with Android's
+fs_config and file_contexts support, as in e2fsdroid. The fork's repository
+hosts their source.

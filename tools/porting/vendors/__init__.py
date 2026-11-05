@@ -84,8 +84,11 @@ def detect_rom_type(ctx: PatchContext) -> None:
         "miui": "ro.miui.ui.version.name",
         "nothing": "ro.nothing.version.id",
     }
+    # Some HyperOS firmware (e.g. OS4 global) sets ro.mi.os.* only in
+    # mi_ext, while product still carries ro.miui.ui.version.name.
+    vendor_props = (*props, ctx.partition_prop("mi_ext"))
     for rom, key in vendor_rom_props.items():
-        if any(prop and prop.get_value(key) for prop in props):
+        if any(prop and prop.get_value(key) for prop in vendor_props):
             ctx.rom_type = rom
             return
 

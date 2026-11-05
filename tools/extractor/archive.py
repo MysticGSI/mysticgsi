@@ -5,6 +5,7 @@ Archive extraction (ZIP, TAR, 7Z, RAR) with member filtering.
 from typing import Callable, List, Optional, Set
 import os
 import shutil
+import struct
 import subprocess
 import tarfile
 import tempfile
@@ -59,6 +60,41 @@ def member_names(archive_path: str) -> Optional[List[str]]:
     except (OSError, zipfile.BadZipFile, tarfile.TarError):
         return None
     return [os.path.basename(n) for n in names]
+
+
+def stored_payload_offset(archive_path: str) -> Optional[int]:
+    """
+    Offset of an uncompressed payload.bin inside a zip, so it can be read
+    in place instead of copied out; None if absent or compressed.
+    """
+    try:
+        if not zipfile.is_zipfile(archive_path):
+            return None
+        with zipfile.ZipFile(archive_path) as zf:
+            info = next(
+                (
+                    m
+                    for m in zf.infolist()
+                    if os.path.basename(m.filename) == "payload.bin"
+                ),
+                None,
+            )
+        # Bit 0 marks an encrypted member.
+        if (
+            info is None
+            or info.compress_type != zipfile.ZIP_STORED
+            or info.flag_bits & 0x1
+        ):
+            return None
+        with open(archive_path, "rb") as f:
+            f.seek(info.header_offset)
+            header = f.read(30)
+        if len(header) != 30 or header[:4] != b"PK\x03\x04":
+            return None
+        name_len, extra_len = struct.unpack("<HH", header[26:30])
+        return info.header_offset + 30 + name_len + extra_len
+    except (OSError, zipfile.BadZipFile):
+        return None
 
 
 def extract_archive(

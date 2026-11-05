@@ -57,6 +57,20 @@ def _member_filter(archive_path, targets):
 
 
 def _unpack_outer_archive(archive_path, staging_dir, targets, log):
+    offset = archive.stored_payload_offset(archive_path)
+    if offset is not None and payload.is_payload(archive_path, offset):
+        log(
+            f"Reading payload.bin in place from {os.path.basename(archive_path)}"
+        )
+        payload.extract_payload(
+            archive_path,
+            staging_dir,
+            target_partitions=targets,
+            logger=log,
+            offset=offset,
+        )
+        return
+
     log(f"Unpacking archive {os.path.basename(archive_path)}...")
     before = set(_staged_files(staging_dir))
     archive.extract_archive(

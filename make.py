@@ -95,6 +95,8 @@ class RomPorter:
         self.programs_32bit_only = []
         self.debloat = True
         self.no_merge = False
+        # EROFS compressor; None builds ext4.
+        self.erofs_format: str | None = None
         self.image_partitions = ["system"]
         self.output_images = {}
         self.avb_key = None
@@ -412,10 +414,6 @@ class RomPorter:
         ) as staging:
             for part in self.image_partitions:
                 source_dir = self.partition_dirs[part]
-                # Allocated blocks include the space small files need.
-                size = int(
-                    fsops.disk_usage(source_dir) * 1.05 + 32 * 1024 * 1024
-                )
                 image = os.path.join(staging, f"{part}.img")
                 labels_name = (
                     "stock_labels.json" if part == "system"
@@ -423,10 +421,9 @@ class RomPorter:
                 )
                 self.logger.set_state("mke2fs")
                 self.log(f"Making {part} image..")
-                rc = tools.build_system_image(
+                options = dict(
                     source_dir=source_dir,
                     output_image=image,
-                    system_size=size,
                     staging_dir=os.path.join(staging, part),
                     stock_labels_path=os.path.join(
                         self.images_dir, labels_name
@@ -435,6 +432,17 @@ class RomPorter:
                     mount_point="/" if part == "system" else f"/{part}",
                     partition_dirs=image_dirs,
                 )
+                if self.erofs_format:
+                    rc = tools.build_erofs_image(
+                        compressor=self.erofs_format, **options
+                    )
+                else:
+                    # Allocated blocks include the space small files need.
+                    size = int(
+                        fsops.disk_usage(source_dir) * 1.05
+                        + 32 * 1024 * 1024
+                    )
+                    rc = tools.build_system_image(system_size=size, **options)
                 if (
                     rc != 0
                     or not os.path.isfile(image)
@@ -480,6 +488,10 @@ class RomPorter:
             if self.cpu_warning:
                 self.build_info_text += (
                     f"CPU compatibility: {self.cpu_warning}\n"
+                )
+            if self.erofs_format:
+                self.build_info_text += (
+                    f"Filesystem: EROFS ({self.erofs_format})\n"
                 )
             self.build_info_text += (
                 f"Raw Image Size: {bytes_to_human(system_size)}\n"

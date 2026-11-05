@@ -44,7 +44,14 @@ def patch(ctx: PatchContext) -> None:
         fsops.append_file(f"{mi_ext}/etc/build.prop", f"{system}/build.prop")
 
         # Reload so the mi_ext props appended above are visible later.
-        ctx.reload_props("system", os.path.join(system, "build.prop"))
+        system_prop = ctx.reload_props(
+            "system", os.path.join(system, "build.prop")
+        )
+        # system's own incremental names the shared missi build.
+        ctx.info.build_incremental = (
+            system_prop.get_value("ro.mi.os.version.incremental")
+            or ctx.info.build_incremental
+        )
 
     if product:
         poco_launcher_path = os.path.join(

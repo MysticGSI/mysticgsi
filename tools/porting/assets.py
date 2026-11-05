@@ -38,7 +38,7 @@ def apply_generic_patches(ctx: PatchContext) -> None:
         )
 
     fsops.cp_r(
-        f"{patch_path}/system", f"{system}/",
+        f"{patch_path}/system/*", f"{system}/",
         exclude=ctx.exclude_patch_file,
     )
     if system_ext and os.path.exists(os.path.join(patch_path, "system_ext")):
