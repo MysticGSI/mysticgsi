@@ -42,6 +42,7 @@ message InstallOperation {
     ZUCCHINI = 11;
     LZ4DIFF_BSDIFF = 12;
     LZ4DIFF_PUFFDIFF = 13;
+    REPLACE_ZSTD = 14;
   }
   required Type type = 1;
   optional uint64 data_offset = 2;
