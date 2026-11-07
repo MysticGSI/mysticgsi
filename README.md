@@ -48,7 +48,7 @@ git clone https://github.com/MysticGSI/mysticgsi.git && cd mysticgsi
 python setup_host.py
 ```
 
-On macOS, Debian/Ubuntu, Arch, Fedora and Windows, the script installs system packages and
+On macOS, Debian/Ubuntu, Arch, Fedora, openSUSE and Windows, the script installs system packages and
 creates `.venv`. On NixOS, it checks the development shell. Native image
 tools and the Apktool JAR are bundled with the repository.
 
@@ -106,6 +106,24 @@ sudo dnf install -y --skip-unavailable python3 python3-pip curl aria2 openssl pa
 python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
+
+</details>
+
+<details>
+<summary>openSUSE (Tumbleweed, Leap)</summary>
+
+```sh
+sudo zypper refresh
+sudo zypper install -y --no-recommends python3 python3-base curl aria2 openssl patch \
+    ca-certificates bsdtar 7zip erofs-utils e2fsprogs java-21-openjdk-headless
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+Python is versioned on openSUSE (`python313`, `python313-base`); the `python3`
+names resolve to whichever version is current. `python3 -m venv` already
+bundles pip, so `python3-pip` is not needed. On Leap, use
+`java-17-openjdk-headless` if `java-21-openjdk-headless` is unavailable.
 
 </details>
 

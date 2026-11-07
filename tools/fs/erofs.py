@@ -52,7 +52,7 @@ def extract_erofs(image_path: str, output_dir: str, logger=None) -> bool:
                 "Please install erofs-utils:\n"
                 "  macOS: brew install erofs-utils\n"
                 "  Linux: sudo apt install erofs-utils "
-                "(or dnf/pacman install erofs-utils)"
+                "(or dnf/pacman/zypper install erofs-utils)"
             )
         return False
 
