@@ -61,6 +61,23 @@ DNF_PACKAGES = [
     "java-openjdk-headless"
 ]
 
+# openSUSE splits libarchive (bsdtar), 7-Zip and erofs-utils into their own
+# packages, and python3 -m venv ships pip through ensurepip, so python3-pip is
+# not needed here.
+ZYPPER_PACKAGES = [
+    "python3",
+    "python3-base",
+    "curl",
+    "aria2",
+    "openssl",
+    "patch",
+    "ca-certificates",
+    "bsdtar",
+    "7zip",
+    "erofs-utils",
+    "e2fsprogs",
+]
+
 
 def as_root(cmd):
     if os.getuid() != 0:
@@ -140,6 +157,7 @@ def setup_windows(dev):
             result.check_returncode()
     make_venv(sys.executable, dev)
 
+
 def setup_fedora(dev):
     print("Installing dnf packages")
     as_root(["dnf", "update", "-y"])
@@ -147,6 +165,48 @@ def setup_fedora(dev):
     if not shutil.which("java"):
         print("Java not found. Installing java-openjdk-headless")
         as_root(["dnf", "install", "-y", "java-openjdk-headless"])
+    make_venv("python3", dev)
+
+
+def zypper_install(packages):
+    # zypper aborts the whole transaction when one name does not resolve, so
+    # retry one by one and let the rest through.
+    try:
+        as_root(
+            [
+                "zypper", "--non-interactive", "install", "--no-recommends",
+                *packages,
+            ]
+        )
+        return
+    except subprocess.CalledProcessError:
+        print("Package set failed, retrying individually")
+
+    missing = []
+    for package in packages:
+        try:
+            as_root(
+                [
+                    "zypper", "--non-interactive", "install", "--no-recommends",
+                    package,
+                ]
+            )
+        except subprocess.CalledProcessError:
+            missing.append(package)
+    if missing:
+        print("Could not install: " + ", ".join(missing))
+
+
+def setup_opensuse(dev):
+    print("Installing zypper packages")
+    as_root(["zypper", "--non-interactive", "refresh"])
+    zypper_install(ZYPPER_PACKAGES)
+    if not shutil.which("java"):
+        for package in ("java-21-openjdk-headless", "java-17-openjdk-headless"):
+            print(f"Java not found. Installing {package}")
+            zypper_install([package])
+            if shutil.which("java"):
+                break
     make_venv("python3", dev)
 
 
@@ -167,6 +227,10 @@ def check_distro():
         return "nixos"
     if "fedora" in distros:
         return "fedora"
+    if distros & {"opensuse", "suse"} or any(
+        d.startswith("opensuse") for d in distros
+    ):
+        return "opensuse"
     raise RuntimeError("Unsupported Linux distro")
 
 
@@ -212,6 +276,8 @@ def main():
             setup_nixos()
         elif distro == "fedora":
             setup_fedora(dev)
+        elif distro == "opensuse":
+            setup_opensuse(dev)
     elif system == "Windows":
         setup_windows(dev)
     else:
