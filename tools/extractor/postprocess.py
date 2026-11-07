@@ -26,6 +26,8 @@ from . import headers
 ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 # Motorola split images: system.img_sparsechunk.0, super_sparsechunk.12, ...
 SPARSECHUNK = re.compile(r"^(?P<part>[\w-]+?)(?:\.img)?_sparsechunk\.(?P<index>\d+)$")
+# Numbered split super images: super.img.0, super.img.1, ...
+NUMBERED_SUPER = re.compile(r"^super\.img\.(?P<index>\d+)$", re.IGNORECASE)
 IMAGE_EXTENSIONS = (".img", ".bin", ".mbn", ".elf", ".ext4", ".raw")
 FILENAME_SUFFIXES = (
     "_image.emmc.img",
@@ -142,6 +144,35 @@ def _merge_sparse_chunks(staging_dir: str, logger):
             _remove(path)
 
 
+def _merge_numbered_super_images(staging_dir: str, logger):
+    for directory, _, files in os.walk(staging_dir):
+        images = sorted(
+            (int(match["index"]), os.path.join(directory, name))
+            for name in files
+            if (match := NUMBERED_SUPER.fullmatch(name))
+        )
+        if not images:
+            continue
+        if any(index != expected for expected, (index, _) in enumerate(images)):
+            raise RuntimeError(
+                "Split super image indices must be consecutive from 0"
+            )
+
+        paths = [path for _, path in images]
+        if logger:
+            logger(f"Merging {len(paths)} split super images...")
+        try:
+            if not sparse.unsparse(paths, os.path.join(directory, "super.img")):
+                raise RuntimeError("Sparse conversion produced no image")
+        except OSError as error:
+            raise RuntimeError(
+                f"Failed to reconstruct split super.img: {error}"
+            ) from error
+
+        for path in paths:
+            _remove(path)
+
+
 def _is_zstd(path: str) -> bool:
     try:
         with open(path, "rb") as f:
@@ -197,6 +228,7 @@ def postprocess_extracted_images(
     _decompress_lz4(staging_dir, logger)
     _rebuild_sdat(staging_dir, logger)
     _merge_sparse_chunks(staging_dir, logger)
+    _merge_numbered_super_images(staging_dir, logger)
 
     super_images = _staged(staging_dir, "**/*super*.img") + _staged(
         staging_dir, "**/*super*.bin"
